@@ -32,6 +32,14 @@ export function currentUserId() {
   return userContext.getStore()?.userId || null;
 }
 
+/**
+ * 取当前登录用户（Cookie 或 Bearer 均可）
+ * 由分发器写入上下文，handler 直接读，避免重复解析
+ */
+export function currentUser() {
+  return userContext.getStore()?.user || null;
+}
+
 // ────────────────────────── 密钥 ──────────────────────────
 
 let SECRET = '';
@@ -210,4 +218,115 @@ export function userFromRequest(req) {
   if (!userId) return null;
   const u = getUserById(userId);
   return u ? publicUser(u) : null;
+}
+
+
+// ────────────────────────── 扩展令牌（Bearer 鉴权）──────────────────────────
+//
+// 浏览器扩展没法用 Cookie 会话（跨站点、跨进程），所以单独发一种长期令牌。
+// 只存哈希，明文只在创建时返回一次 —— 即使数据库泄漏也拿不到可用令牌。
+
+import { createHash } from 'node:crypto';
+
+function tokensFile(userId) {
+  return resolve(userDataDir(userId), 'tokens.json');
+}
+
+function readTokens(userId) {
+  const f = tokensFile(userId);
+  if (!existsSync(f)) return [];
+  try {
+    const d = JSON.parse(readFileSync(f, 'utf-8'));
+    return Array.isArray(d) ? d : [];
+  } catch { return []; }
+}
+
+function writeTokens(userId, list) {
+  const dir = userDataDir(userId);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  writeFileSync(tokensFile(userId), JSON.stringify(list, null, 2), 'utf-8');
+}
+
+function hashToken(raw) {
+  return createHash('sha256').update(String(raw)).digest('hex');
+}
+
+/** 创建令牌。明文只返回这一次。 */
+export function createToken(userId, name) {
+  const raw = 'jme_' + randomBytes(24).toString('base64url');
+  const record = {
+    id: 'tk_' + randomBytes(6).toString('hex'),
+    name: String(name || '浏览器扩展').slice(0, 40),
+    hash: hashToken(raw),
+    // 只留前 8 位用于列表展示，便于用户辨认是哪一个
+    hint: raw.slice(0, 12),
+    createdAt: new Date().toISOString(),
+    lastUsedAt: null,
+  };
+  const list = readTokens(userId);
+  // 每人最多 10 个，超出则删最旧的
+  if (list.length >= 10) list.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)).splice(9);
+  list.push(record);
+  writeTokens(userId, list);
+  return { token: raw, record: publicToken(record) };
+}
+
+export function listTokens(userId) {
+  return readTokens(userId).map(publicToken);
+}
+
+export function publicToken(r) {
+  return {
+    id: r.id,
+    name: r.name,
+    hint: r.hint,
+    createdAt: r.createdAt,
+    lastUsedAt: r.lastUsedAt,
+  };
+}
+
+export function revokeToken(userId, tokenId) {
+  const list = readTokens(userId);
+  const next = list.filter((r) => r.id !== tokenId);
+  if (next.length === list.length) return false;
+  writeTokens(userId, next);
+  return true;
+}
+
+/**
+ * 校验 Bearer 令牌
+ * @returns {string|null} userId
+ */
+export function verifyBearer(raw) {
+  if (!raw || typeof raw !== 'string') return null;
+  if (!raw.startsWith('jme_')) return null;
+
+  const hash = hashToken(raw);
+  const users = readUsers();
+
+  for (const u of users) {
+    const list = readTokens(u.id);
+    const hit = list.find((r) => {
+      if (r.hash.length !== hash.length) return false;
+      try { return timingSafeEqual(Buffer.from(r.hash, 'hex'), Buffer.from(hash, 'hex')); }
+      catch { return false; }
+    });
+    if (hit) {
+      // 记录最后使用时间（节流：超过 1 分钟才写）
+      const now = Date.now();
+      if (!hit.lastUsedAt || now - new Date(hit.lastUsedAt).getTime() > 60000) {
+        hit.lastUsedAt = new Date(now).toISOString();
+        writeTokens(u.id, list);
+      }
+      return u.id;
+    }
+  }
+  return null;
+}
+
+/** 从请求头解析 Bearer */
+export function bearerFromRequest(req) {
+  const h = req.headers.authorization || '';
+  const m = /^Bearer\s+(.+)$/i.exec(h.trim());
+  return m ? m[1].trim() : null;
 }

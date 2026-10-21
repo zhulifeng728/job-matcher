@@ -39,6 +39,17 @@
 
 **要求**：Node.js 18+（零第三方依赖，不需要 `npm install`）
 
+## 两个入口
+
+| 入口 | 场景 |
+|---|---|
+| **浏览器扩展**（推荐） | 在 BOSS/智联/猎聘等网站看岗位时，右下角一键算匹配度，不用复制粘贴 |
+| **网页版** | 批量导入 JD、改简历、看深度复习文档、管理投递状态 |
+
+扩展是同一个后端，共用你的简历和岗位库。详见 [docs/EXTENSION.md](docs/EXTENSION.md)。
+
+**要求**：Node.js 18+（零第三方依赖，不需要 `npm install`）
+
 ### 使用流程（产品的真实起点）
 
 ```
@@ -404,6 +415,11 @@ job-matcher/
 | GET | `/api/resume` | 读取我的简历画像与要点 |
 | POST | `/api/resume` | **导入简历**（纯文本或 docx base64） |
 | PATCH | `/api/resume` | 修正姓名 / 年限 / 城市 |
+| POST | `/api/tokens` | 生成扩展令牌（明文只返回一次） |
+| GET | `/api/tokens` | 列出令牌 |
+| DELETE | `/api/tokens/:id` | 撤销令牌 |
+| GET | `/api/extension/status` | 扩展自检（Bearer 鉴权） |
+| POST | `/api/extension/analyze` | **扩展一键分析**（Bearer 鉴权） |
 | GET | `/api/health` | 健康检查（无需鉴权） |
 | GET | `/api/status` | 运行状态（AI 状态已脱敏） |
 | GET | `/api/profile` | 读取能力画像 |

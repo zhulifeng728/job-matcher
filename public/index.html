@@ -241,6 +241,20 @@ textarea { min-height:200px; line-height:1.7; resize:vertical; }
 .md-doc strong { font-weight:600; color:var(--ink); }
 .md-doc code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); padding:1px 5px; border-radius:4px; color:var(--brand-deep); }
 .md-doc hr { border:none; border-top:1px solid var(--line); margin:28px 0; }
+.steps-ol { padding-left:22px; margin:0; }
+.steps-ol li { margin-bottom:10px; line-height:1.7; color:var(--ink-2); }
+.steps-ol li strong { color:var(--ink); }
+.steps-ol code { font-family:var(--mono); font-size:12.5px; background:var(--bg-soft-2); padding:2px 6px; border-radius:4px; color:var(--brand-deep); }
+.token-box {
+  background:var(--bg-soft); border:1px dashed var(--line-strong); border-radius:var(--r-ctl);
+  padding:14px 16px; font-family:var(--mono); font-size:12.5px; word-break:break-all;
+  color:var(--brand-deep); line-height:1.6;
+}
+.token-item {
+  display:flex; align-items:center; gap:12px; padding:12px 0;
+  border-bottom:1px solid var(--line);
+}
+.token-item:last-child { border-bottom:none; }
 .doc-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
 
 .tabs { display:flex; gap:6px; border-bottom:1px solid var(--line); margin-bottom:24px; }
@@ -389,6 +403,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         <button role="tab" data-view="optimize" aria-selected="false">简历优化</button>
         <button role="tab" data-view="prep" aria-selected="false">技术复习</button>
         <button role="tab" data-view="jobs" aria-selected="false">职位列表</button>
+        <button role="tab" data-view="extension" aria-selected="false">浏览器扩展</button>
         <button role="tab" data-view="settings" aria-selected="false">设置</button>
       </nav>
       <div class="spacer"></div>
@@ -753,6 +768,71 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
     </div>
   </section>
 
+  <!-- 浏览器扩展 -->
+  <section class="view" id="view-extension" hidden>
+    <div class="page">
+      <div class="page-header">
+        <h2>浏览器扩展</h2>
+        <p>在招聘网站看岗位时，右下角一键算匹配度，不用复制粘贴。</p>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
+          <div style="flex:1;min-width:260px">
+            <h3 class="card-title" style="margin-bottom:6px">为什么用扩展</h3>
+            <p class="card-desc" style="margin-bottom:14px">
+              在 BOSS 直聘、智联、猎聘、拉勾、前程无忧、LinkedIn、牛客上打开任何岗位详情页，
+              点右下角蓝色按钮，就能看到这个岗位和你简历的匹配度、维度得分、短板和缺失关键词。
+            </p>
+            <div class="tags">
+              <span class="tag tag-brand">不用复制粘贴</span>
+              <span class="tag">只读取你正打开的页面</span>
+              <span class="tag">不调用平台接口</span>
+              <span class="tag">令牌只存浏览器</span>
+            </div>
+          </div>
+          <div style="flex:none;width:200px;text-align:center">
+            <div style="width:64px;height:64px;margin:0 auto 12px;border-radius:18px;
+              background:linear-gradient(135deg,#5B8DEF,#3669EC);display:flex;align-items:center;
+              justify-content:center;color:#fff;font-weight:700;font-size:24px;
+              box-shadow:0 8px 24px rgba(54,105,236,.3)">AI</div>
+            <a class="btn btn-primary" href="download/job-matcher-extension.zip" download
+               style="display:block">下载扩展</a>
+            <div style="font-size:11.5px;color:var(--ink-4);margin-top:8px">v1.0.0 · 46 KB</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <h3 class="card-title">安装（3 步）</h3>
+        <ol class="steps-ol">
+          <li><strong>解压</strong>下载的 zip 到一个你不会删的目录</li>
+          <li>Chrome 地址栏输入 <code>chrome://extensions</code>，打开右上角「开发者模式」</li>
+          <li>点「加载已解压的扩展程序」，选中解压出来的文件夹</li>
+        </ol>
+        <div class="alert alert-info" style="margin-top:14px;margin-bottom:0">
+          扩展已上架前需要手动加载。装好后点工具栏的扩展图标，填入服务器地址和下面的令牌。
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">访问令牌</h3>
+        <p class="card-desc">
+          扩展用这个令牌识别你的账号。<strong>明文只在生成时显示一次</strong>，服务端只存哈希。
+          令牌只保存在你浏览器本地，不会上传到别处。
+        </p>
+
+        <div class="toolbar" style="margin-top:16px">
+          <button class="btn btn-primary" id="btnNewToken">生成新令牌</button>
+          <span id="tokenStatus" style="font-size:13px;color:var(--ink-3)"></span>
+        </div>
+
+        <div id="newTokenBox" style="margin-top:16px" hidden></div>
+        <div id="tokenList" style="margin-top:18px"></div>
+      </div>
+    </div>
+  </section>
+
   <!-- 设置 -->
   <section class="view" id="view-settings" hidden>
     <div class="page">
@@ -803,7 +883,7 @@ const S = {
   exportText: '', exportFormat: 'md',
   optJob: null, prepJob: null,
   resumeCache: {}, prepCache: {},
-  user: null, hasResume: false, prepDocText: '',
+  user: null, hasResume: false, prepDocText: '', newToken: '',
 };
 
 const $ = (id) => document.getElementById(id);
@@ -1465,6 +1545,93 @@ function renderPrepCards(d) {
 }
 
 /* ═══════════════════════════════════════════
+   浏览器扩展 · 令牌管理
+   ═══════════════════════════════════════════ */
+
+async function loadTokens() {
+  const box = $('tokenList');
+  if (!box) return;
+  box.innerHTML = skList(1);
+
+  try {
+    const d = await api('/api/tokens');
+    const list = d.tokens || [];
+
+    if (!list.length) {
+      box.innerHTML = '<div style="font-size:13.5px;color:var(--ink-3)">'
+        + '还没有令牌。点上面的「生成新令牌」，然后填到扩展里。</div>';
+      return;
+    }
+
+    box.innerHTML = list.map((tk) => {
+      const created = new Date(tk.createdAt).toLocaleString('zh-CN', { hour12: false }).slice(0, 16);
+      const used = tk.lastUsedAt
+        ? new Date(tk.lastUsedAt).toLocaleString('zh-CN', { hour12: false }).slice(0, 16)
+        : '从未使用';
+      return '<div class="token-item">'
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-size:14px;font-weight:500">' + esc(tk.name) + '</div>'
+        + '<div style="font-size:12px;color:var(--ink-4);margin-top:3px">'
+        + '<code>' + esc(tk.hint) + '…</code>　创建于 ' + esc(created) + '　最后使用 ' + esc(used) + '</div>'
+        + '</div>'
+        + '<button class="btn btn-sm btn-danger" data-revoke="' + esc(tk.id) + '">撤销</button>'
+        + '</div>';
+    }).join('');
+
+    box.querySelectorAll('[data-revoke]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('撤销后使用这个令牌的扩展会立刻失效，确定？')) return;
+        try {
+          await api('/api/tokens/' + encodeURIComponent(btn.dataset.revoke), { method: 'DELETE' });
+          loadTokens();
+        } catch (e) {
+          alert('撤销失败：' + e.message);
+        }
+      });
+    });
+  } catch (e) {
+    box.innerHTML = alertHTML('令牌加载失败：' + esc(e.message), 'error');
+  }
+}
+
+if ($('btnNewToken')) $('btnNewToken').addEventListener('click', async () => {
+  const name = prompt('给这个令牌起个名字（比如「家里的 Chrome」）', '浏览器扩展');
+  if (name === null) return;
+
+  const btn = $('btnNewToken');
+  btn.disabled = true;
+  try {
+    const d = await api('/api/tokens', { method: 'POST', body: { name: name || '浏览器扩展' } });
+    const box = $('newTokenBox');
+    box.hidden = false;
+    box.innerHTML = '<div class="alert alert-warn" style="margin-bottom:12px">'
+      + '<strong>这个令牌只显示一次</strong>，关掉就再也看不到了。现在复制填到扩展里。</div>'
+      + '<div class="token-box" id="newTokenValue">' + esc(d.token) + '</div>'
+      + '<div class="toolbar" style="margin-top:12px">'
+      + '<button class="btn btn-sm btn-primary" onclick="copyNewToken()">复制令牌</button>'
+      + '<span style="font-size:12.5px;color:var(--ink-4)">粘贴到扩展弹窗的「访问令牌」输入框</span></div>';
+    S.newToken = d.token;
+    loadTokens();
+  } catch (e) {
+    $('newTokenBox').hidden = false;
+    $('newTokenBox').innerHTML = alertHTML('生成失败：' + esc(e.message), 'error');
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+async function copyNewToken() {
+  if (!S.newToken) return;
+  try {
+    await navigator.clipboard.writeText(S.newToken);
+    $('tokenStatus').textContent = '✓ 已复制到剪贴板';
+    setTimeout(() => { $('tokenStatus').textContent = ''; }, 2500);
+  } catch {
+    alert('复制失败，请手动选中复制');
+  }
+}
+
+/* ═══════════════════════════════════════════
    深度复习文档
    ═══════════════════════════════════════════ */
 
@@ -1775,12 +1942,13 @@ function switchView(name) {
   document.querySelectorAll('.nav-links button').forEach((b) => {
     b.setAttribute('aria-selected', String(b.dataset.view === name));
   });
-  ['home', 'resume', 'optimize', 'prep', 'jobs', 'detail', 'import', 'export', 'settings'].forEach((v) => {
+  ['home', 'resume', 'optimize', 'prep', 'jobs', 'detail', 'import', 'extension', 'export', 'settings'].forEach((v) => {
     const el = $('view-' + v);
     if (el) el.hidden = v !== name;
   });
   if (name === 'settings') loadSettings();
   if (name === 'resume') loadResume();
+  if (name === 'extension') loadTokens();
   if (name === 'optimize') { if (!S.optJob) { setStepper('optStepper', 1); if ($('optPickCard')) $('optPickCard').hidden = false; if ($('optResult')) $('optResult').innerHTML = ''; } }
   if (name === 'prep') { if (!S.prepJob) { setStepper('prepStepper', 1); if ($('prepPickCard')) $('prepPickCard').hidden = false; if ($('prepResult')) $('prepResult').innerHTML = ''; } }
   window.scrollTo(0, 0);

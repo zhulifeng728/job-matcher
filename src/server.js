@@ -34,7 +34,8 @@ import { renderMarkdown } from './markdown.js';
 import {
   registerUser, verifyUser, publicUser, userFromRequest,
   issueSession, sessionCookie, clearSessionCookie, userContext,
-  hasUsers, userDataDir,
+  hasUsers, userDataDir, getUserById,
+  createToken, listTokens, revokeToken, verifyBearer, bearerFromRequest, currentUser,
 } from './auth.js';
 import { parseResume, buildProfileFromResume, summarizeImport } from './resume.js';
 
@@ -547,6 +548,146 @@ const routes = {
     return { ok: true, summary: summarizeImport(prof) };
   },
 
+  // ─────────── 扩展令牌 ───────────
+
+  /** 列出我的扩展令牌 */
+  'GET /api/tokens': async () => {
+    const user = currentUser();
+    if (!user) return { error: '请先用账号登录再管理令牌', status: 401 };
+    return { tokens: listTokens(user.id) };
+  },
+
+  /** 新建令牌（明文只返回一次） */
+  'POST /api/tokens': async (q, p, body, req) => {
+    const user = currentUser();
+    if (!user) return { error: '请先用账号登录再管理令牌', status: 401 };
+    const rl = checkRate(`token:${clientIp(req)}`, 10);
+    if (!rl.ok) return { error: '操作过于频繁', status: 429 };
+
+    const r = createToken(user.id, body.name);
+    return { ok: true, token: r.token, record: r.record };
+  },
+
+  /** 撤销令牌 */
+  'DELETE /api/tokens/:id': async (q, params) => {
+    const user = currentUser();
+    if (!user) return { error: '请先登录', status: 401 };
+    const ok = revokeToken(user.id, params.id);
+    return ok ? { ok: true } : { error: '令牌不存在', status: 404 };
+  },
+
+  // ─────────── 浏览器扩展 ───────────
+
+  /** 扩展自检：令牌是否有效、简历是否已导入 */
+  'GET /api/extension/status': async () => {
+    const user = currentUser();
+    if (!user) return { error: '令牌无效或已撤销', status: 401 };
+    return {
+      ok: true,
+      user: { name: user.displayName || user.username },
+      hasResume: hasOwnProfile(),
+      jobCount: loadJobs().length,
+    };
+  },
+
+  /**
+   * 一键分析（扩展调用）
+   * 输入 JD 文本 + 来源 URL，返回评分、得分构成、建议，并落库。
+   */
+  'POST /api/extension/analyze': async (q, p, body) => {
+    const user = currentUser();
+    if (!user) return { error: '令牌无效或已撤销', status: 401 };
+
+    const rl = checkRate(`ext:${user.id}`, 60);
+    if (!rl.ok) return { error: '分析过于频繁，稍等一下', status: 429 };
+
+    const text = str(body.text, 60_000);
+    if (!text || text.trim().length < 40) {
+      return { error: 'JD 内容太短，可能没抓取到正文', status: 400 };
+    }
+
+    let profile = loadProfile();
+    if (!profile) return { error: '还没导入简历，请先到网站导入', status: 400, needResume: true };
+
+    // 解析 + 评分
+    const parsed = parseJD(text);
+
+    // 扩展已经识别出标题/公司时优先采用 —— 比从正文猜准得多
+    const hintTitle = str(body.title, 80).trim();
+    const hintCompany = str(body.company, 60).trim();
+    const GENERIC = /^(职位描述|岗位职责|职位详情|工作职责|招聘|职位信息|岗位描述|职责描述)$/;
+
+    if (hintTitle && (!parsed.position || parsed.position.length < 3 || GENERIC.test(parsed.position))) {
+      parsed.position = hintTitle;
+    }
+    // 公司名以扩展识别结果为准：它看的是页面结构，比从正文里猜准
+    if (hintCompany && hintCompany.length >= 2) {
+      parsed.company = hintCompany;
+    }
+
+    const sourceUrl = str(body.url, 500);
+    const sc = scoreJob(parsed, profile);
+
+    // 来源标记：区分是扩展抓的还是手工贴的
+    const record = sliceForStorage({
+      ...sc,
+      link: sourceUrl || sc.link || '',
+      via: str(body.via, 20) || 'extension',
+    });
+
+    const { list, added, updated } = upsertJobs([record], loadJobs());
+    saveJobs(list);
+    const saved = added[0] || updated[0];
+
+    // 轻量摘要：给扩展面板显示，不返回全文
+    const scoreResult = {
+      total: saved.total,
+      grade: saved.grade,
+      breakdown: {
+        dimensions: (saved.dimensions || []).map((d) => ({
+          id: d.id, name: d.name, weight: d.weight, ratio: d.ratio, hits: d.hits || [],
+        })),
+      },
+    };
+
+    let advice = null;
+    try {
+      advice = tailorResume(saved, profile, scoreResult);
+    } catch { /* 定制失败不影响评分返回 */ }
+
+    return {
+      ok: true,
+      job: {
+        id: saved.id,
+        position: saved.position,
+        company: saved.company,
+        city: saved.city,
+        salary: saved.salary,
+        total: saved.total,
+        grade: saved.grade,
+        isNew: added.length > 0,
+      },
+      dimensions: (saved.dimensions || [])
+        .filter((d) => d.weight > 0)
+        .map((d) => ({
+          name: d.name,
+          ratio: Math.round((d.ratio || 0) * 100),
+          weight: d.weight,
+          hits: (d.hits || []).slice(0, 6),
+        })),
+      strong: (advice?.strong || []).slice(0, 3).map((h) => h.text),
+      gaps: (advice?.gaps || []).slice(0, 3).map((g) => ({
+        name: g.dimension,
+        ratio: Math.round((g.ratio || 0) * 100),
+        weight: g.weight,
+        tip: g.advice,
+      })),
+      missing: (advice?.missingKeywords || []).slice(0, 8),
+      corrections: saved.corrections || [],
+      url: sourceUrl,
+    };
+  },
+
   // ─────────── 状态与元信息 ───────────
 
   'GET /api/status': async (q, p, b, req) => {
@@ -829,6 +970,7 @@ const routes = {
       note: doc.note || '',
       rounds: doc.rounds || 1,
       complete: doc.complete !== false,
+      content: doc.content,               // 原始 Markdown（"复制全文"用）
       chars: (doc.content || '').length,
       // 服务端渲成 HTML，前端直接插入；文本已全量转义
       html: renderMarkdown(doc.content),
@@ -1058,6 +1200,28 @@ function buildCSV(jobs, minScore) {
 
 // ═══════════════════════ 分发 ═══════════════════════
 
+/**
+ * CORS：只允许浏览器扩展来源。
+ * 扩展从 background 发请求时因为有 host_permissions 本不需要 CORS，
+ * 这里放开是为了让 content script 直连、以及在扩展调试页里测试时也能通。
+ */
+function applyCors(req, res) {
+  const origin = req.headers.origin || '';
+  // 扩展来源 + 本地开发来源（localhost 只能在开发机上用，不影响线上安全）
+  const allowed =
+    origin.startsWith('chrome-extension://') ||
+    origin.startsWith('moz-extension://') ||
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
+  if (allowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Max-Age', '86400');
+  }
+}
+
 const PUBLIC_ROUTES = new Set([
   'GET /api/health',
   'GET /api/auth/required',
@@ -1080,6 +1244,13 @@ const server = http.createServer(async (req, res) => {
   const path = url.pathname;
 
   if (!path.startsWith('/api/')) return serveStatic(res, path);
+
+  // CORS：先回预检，再进路由
+  applyCors(req, res);
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    return res.end();
+  }
 
   // 路由匹配
   let handler = null;
@@ -1114,8 +1285,17 @@ const server = http.createServer(async (req, res) => {
 
   if (!handler) return json(res, { error: '接口不存在' }, 404);
 
-  // ── 识别当前用户（多用户模式）──
-  const user = userFromRequest(req);
+  // ── 识别当前用户 ──
+  // 优先 Cookie 会话（Web 端），其次 Bearer 令牌（浏览器扩展）
+  let user = userFromRequest(req);
+  const bearer = bearerFromRequest(req);
+  if (!user && bearer) {
+    const uid = verifyBearer(bearer);
+    if (uid) {
+      const u = getUserById(uid);
+      if (u) user = publicUser(u);
+    }
+  }
 
   // 鉴权：登录用户放行；否则回退到单用户口令模式（本地/演示）
   const needsAuth = !PUBLIC_ROUTES.has(routeKey);
@@ -1143,7 +1323,7 @@ const server = http.createServer(async (req, res) => {
       : {};
 
     // 把 userId 注入 AsyncLocalStorage，数据层据此选择用户目录
-    const result = await userContext.run({ userId: user?.id || null }, () =>
+    const result = await userContext.run({ userId: user?.id || null, user: user || null }, () =>
       handler(url.searchParams, params, body, req, res)
     );
 
