@@ -1,0 +1,29 @@
+# ── 私人数据（绝对不能提交）──
+data/jobs.json
+data/jobs.backup.*.json
+data/ai-config.json
+data/*.json.tmp.*
+
+# 画像：profile.json 是开源示例（随仓库发布）
+#       profile.local.json 是你的真实履历（绝不上传）
+data/presets/profile.local.json
+!data/presets/profile.json
+
+# ── 环境与密钥 ──
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ── 运行时 ──
+node_modules/
+logs/
+*.log
+npm-debug.log*
+.DS_Store
+
+# ── 编辑器 ──
+.vscode/
+.idea/
+*.swp
