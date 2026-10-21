@@ -242,12 +242,17 @@ export function scoreJob(job, profile) {
 
   const total = Math.max(0, Math.min(100, Math.round(rawTotal)));
 
-  // ── 7. 评级 ──
+  // ── 7. 评级（阈值可在 profile.json 的 grades 里覆盖）──
+  // 默认阈值按「一个匹配度良好的人去投一批相关岗位」校准：
+  //   约 15% 落在 S，25% 落在 A，其余按弱匹配分布
+  // 如果你的画像关键词少、整体分数偏低，可以下调这些阈值
+  const G = { S: 88, A: 75, B: 58, C: 40, ...(profile.grades || {}) };
+
   let grade, gradeLabel;
-  if (total >= 78) { grade = 'S'; gradeLabel = '强匹配 · 优先投'; }
-  else if (total >= 65) { grade = 'A'; gradeLabel = '较匹配 · 值得投'; }
-  else if (total >= 50) { grade = 'B'; gradeLabel = '一般 · 有意向再投'; }
-  else if (total >= 35) { grade = 'C'; gradeLabel = '弱匹配 · 不建议投'; }
+  if (total >= G.S) { grade = 'S'; gradeLabel = '强匹配 · 优先投'; }
+  else if (total >= G.A) { grade = 'A'; gradeLabel = '较匹配 · 值得投'; }
+  else if (total >= G.B) { grade = 'B'; gradeLabel = '一般 · 有意向再投'; }
+  else if (total >= G.C) { grade = 'C'; gradeLabel = '弱匹配 · 不建议投'; }
   else { grade = 'D'; gradeLabel = '不匹配 · 跳过'; }
 
   // ── 8. 强项 / 短板（用于生成投递策略）──

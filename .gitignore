@@ -4,6 +4,9 @@ data/jobs.backup.*.json
 data/ai-config.json
 data/*.json.tmp.*
 
+# 演示数据（由 scripts/seed-demo.js 生成，不入库）
+data-demo/
+
 # 画像：profile.json 是开源示例（随仓库发布）
 #       profile.local.json 是你的真实履历（绝不上传）
 data/presets/profile.local.json

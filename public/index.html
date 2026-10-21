@@ -612,6 +612,66 @@ textarea {
 .guide-step-desc { font-size: 12.5px; color: var(--ink-muted); line-height: 1.6; }
 .guide-actions { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
 
+/* 采集书签 */
+.bookmarklet-summary {
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  list-style: none;
+  padding: 2px 0;
+}
+.bookmarklet-summary::-webkit-details-marker { display: none; }
+.bookmarklet-summary::before {
+  content: "＋";
+  color: var(--ink-muted);
+  font-weight: 700;
+  display: inline-block;
+  width: 12px;
+}
+.bookmarklet-box[open] .bookmarklet-summary::before { content: "−"; }
+.bookmarklet-hint { font-size: 12px; font-weight: 400; color: var(--ink-muted); }
+.bookmarklet-body { margin-top: 16px; }
+
+.bookmarklet-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.bookmarklet-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 18px;
+  border-radius: var(--r-input);
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: grab;
+  border: 1px solid var(--accent);
+  user-select: none;
+}
+.bookmarklet-link:active { cursor: grabbing; }
+.bookmarklet-link:hover { background: var(--accent-hover); }
+
+.bookmarklet-note {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: var(--ink-muted);
+  line-height: 1.65;
+  padding: 11px 13px;
+  background: var(--surface-sunken);
+  border-radius: var(--r-input);
+}
+.bookmarklet-help { margin-top: 12px; font-size: 12.5px; }
+.bookmarklet-help summary {
+  cursor: pointer;
+  color: var(--ink-muted);
+  font-weight: 600;
+  padding: 4px 0;
+}
+.bookmarklet-help ol { margin: 8px 0 0; padding-left: 20px; color: var(--ink-muted); line-height: 1.8; }
+
 .skeleton {
   background: linear-gradient(90deg, var(--surface-sunken) 25%, #e8e7e2 50%, var(--surface-sunken) 75%);
   background-size: 200% 100%;
@@ -878,6 +938,45 @@ code {
 
         <div id="parseResult" style="margin-top:14px"></div>
       </div>
+
+      <!-- 采集书签：解决"复制 JD 太麻烦" -->
+      <div class="panel">
+        <details class="bookmarklet-box">
+          <summary class="bookmarklet-summary">
+            <span>觉得复制粘贴麻烦？用一键采集书签</span>
+            <span class="bookmarklet-hint">拖一次，以后在岗位页点一下就复制好</span>
+          </summary>
+
+          <div class="bookmarklet-body">
+            <p class="panel-desc" style="margin-bottom:12px">
+              把下面这个链接拖到浏览器书签栏。以后在招聘网站打开任意岗位页，
+              点一下书签，它就会把当前页面内容复制到剪贴板，你回来粘贴即可。
+            </p>
+
+            <div class="bookmarklet-row">
+              <a id="bookmarkletLink" class="bookmarklet-link" href="#" draggable="true">
+                采集当前岗位
+              </a>
+              <button class="btn btn-sm" id="btnCopyBookmarklet">复制书签代码</button>
+            </div>
+
+            <p class="bookmarklet-note">
+              说明：书签只在<strong>你主动点击</strong>时执行，只读取你当前看到的页面文本并写入剪贴板，
+              不发起任何网络请求、不登录账号、不批量抓取。是否使用请自行遵守对应网站的用户协议。
+            </p>
+
+            <details class="bookmarklet-help">
+              <summary>怎么安装书签？</summary>
+              <ol>
+                <li>让浏览器显示书签栏：Chrome / Edge 按 <code>⌘⇧B</code>（Mac）或 <code>Ctrl+Shift+B</code>（Win）</li>
+                <li>把上面的「采集当前岗位」按钮<strong>拖</strong>到书签栏</li>
+                <li>打开任意岗位页面，点这个书签</li>
+                <li>回到本页，<code>⌘V</code> / <code>Ctrl+V</code> 粘贴到上面的输入框</li>
+              </ol>
+            </details>
+          </div>
+        </details>
+      </div>
     </section>
 
     <!-- ══════════ 导出 ══════════ -->
@@ -969,8 +1068,17 @@ function esc(s) {
   ));
 }
 
+/**
+ * 所有请求走相对路径（去掉开头的 /）
+ * 这样同一个前端既能跑在根路径 /，也能跑在子路径 /demo/ 下，
+ * 不需要为反向代理的路径前缀改代码。
+ */
+function apiUrl(path) {
+  return String(path).replace(/^\//, '');
+}
+
 async function api(path, opts = {}) {
-  const res = await fetch(path, {
+  const res = await fetch(apiUrl(path), {
     headers: { 'Content-Type': 'application/json' },
     credentials: 'same-origin',
     ...opts,
@@ -1680,8 +1788,68 @@ $('btnRescore').addEventListener('click', async () => {
   }
 });
 
+/* ═══════════════════════════════════════════
+   采集书签
+   ═══════════════════════════════════════════ */
+
+/**
+ * 书签代码：只在用户主动点击时执行
+ * - 只读取当前页面已渲染的文本，不发起网络请求
+ * - 只写入剪贴板
+ * - 不做翻页、不批量、不改动目标页面数据
+ */
+function buildBookmarklet() {
+  const code = [
+    'javascript:(function(){',
+    'var b=document.body;if(!b){alert("页面未加载完成");return}',
+    'var t=b.innerText||"";',
+    't=t.replace(/[\t\u00a0]+/g," ").replace(/ *\n */g,"\n").replace(/\n{3,}/g,"\n\n").trim();',
+    'if(t.length>20000)t=t.slice(0,20000)+"\n\n[内容超长已截断]";',
+    'var out=(document.title||"")+"\n\n"+t;',
+    'var done=function(){var d=document.createElement("div");',
+    'd.textContent="已复制 "+out.length+" 字，去 Job Matcher 粘贴即可";',
+    'd.style.cssText="position:fixed;z-index:2147483647;left:50%;top:20px;transform:translateX(-50%);"',
+    '+"background:#14140f;color:#fff;padding:11px 18px;border-radius:8px;font:13px/1.5 -apple-system,PingFang SC,sans-serif;"',
+    '+"box-shadow:0 8px 24px rgba(0,0,0,.35);max-width:90vw";',
+    'document.body.appendChild(d);setTimeout(function(){d.remove()},2800)};',
+    'if(navigator.clipboard&&navigator.clipboard.writeText){',
+    'navigator.clipboard.writeText(out).then(done).catch(function(){fallback()})',
+    '}else{fallback()}',
+    'function fallback(){var ta=document.createElement("textarea");ta.value=out;',
+    'ta.style.cssText="position:fixed;top:-9999px";document.body.appendChild(ta);ta.select();',
+    'try{document.execCommand("copy");done()}catch(e){alert("复制失败，请手动 Ctrl+A / Ctrl+C")}',
+    'ta.remove()}',
+    '})();',
+  ].join('');
+
+  return code;
+}
+
+function initBookmarklet() {
+  const a = document.getElementById('bookmarkletLink');
+  const btn = document.getElementById('btnCopyBookmarklet');
+  if (!a || !btn) return;
+
+  const code = buildBookmarklet();
+  a.setAttribute('href', code);
+  a.setAttribute('title', '拖到书签栏');
+
+  btn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      const old = btn.textContent;
+      btn.textContent = '已复制';
+      setTimeout(() => { btn.textContent = old; }, 1500);
+    } catch {
+      // 剪贴板不可用（非 HTTPS 的常见情况）→ 让用户手动拖
+      alert('当前环境无法写入剪贴板。请直接把左侧按钮拖到书签栏即可，不需要复制代码。');
+    }
+  });
+}
+
 /* 启动 */
 boot();
+initBookmarklet();
 </script>
 </body>
 </html>

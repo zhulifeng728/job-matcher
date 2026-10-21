@@ -20,7 +20,15 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
-export const DATA_DIR = resolve(ROOT, 'data');
+
+/**
+ * 数据目录可配置，用于跑多个实例（如：真实实例 + 公开 demo 实例）
+ *   JOB_MATCHER_DATA_DIR=/opt/job-matcher/data-demo
+ * 不设则用默认的 <项目根>/data
+ */
+export const DATA_DIR = process.env.JOB_MATCHER_DATA_DIR
+  ? resolve(process.env.JOB_MATCHER_DATA_DIR)
+  : resolve(ROOT, 'data');
 
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
