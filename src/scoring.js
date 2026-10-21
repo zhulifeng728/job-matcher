@@ -102,8 +102,16 @@ export function parseYearsRequirement(text, myYears) {
   }
 
   // 超出上限过多 → overqualified
+  // 惩罚随超出年数递增（每年 -3），封顶 -18，避免"9 年经验投 5 年上限岗位"仍然拿高分
   if (max !== null && myYears > max + 2) {
-    return { min, max, note: `年限要求上限 ${max} 年，你 ${myYears} 年，可能 overqualified`, bonus: -6 };
+    const over = myYears - max;
+    const penalty = Math.max(-18, -3 * over);
+    return {
+      min,
+      max,
+      note: `年限要求上限 ${max} 年，你 ${myYears} 年，超出 ${over} 年，可能 overqualified`,
+      bonus: penalty,
+    };
   }
 
   // 低于下限 → 可能不够
@@ -155,7 +163,35 @@ export function scoreJob(job, profile) {
     };
   });
 
-  const dimensionScore = dims.reduce((sum, d) => sum + d.score, 0);
+  // ══════════════════════════════════════════════════════════════
+  // 维度汇总（核心算法，改过一版）
+  //
+  // 旧算法（有缺陷）：dimensionScore = Σ(weight × ratio)，满分固定 100。
+  //   问题：分母是「候选人全部能力的权重和」，与 JD 无关。
+  //   结果：一个只要求小程序能力的岗位，即使候选人完美匹配，
+  //        也只能拿到 15/100 分 → 被判 D 级。这违背匹配的本意。
+  //
+  // 新算法：分两步
+  //   ① 满足度 matchRatio = Σ命中维度的得分 / Σ命中维度的权重
+  //      —— 分母只算「JD 真正要求的维度」，回答「要求的东西我有没有」
+  //   ② 广度 breadth = Σ命中维度的权重 / 全部维度权重
+  //      —— 回答「这个岗位能用上我多少能力」，用于区分岗位层次
+  //   综合 = 100 × (满足度 × 0.7 + 广度 × 0.3)
+  // ══════════════════════════════════════════════════════════════
+
+  const totalWeight = dims.reduce((s, d) => s + d.weight, 0);
+  const demanded = dims.filter((d) => d.ratio > 0);        // JD 有要求的维度
+  const demandedWeight = demanded.reduce((s, d) => s + d.weight, 0);
+  const demandedScore = demanded.reduce((s, d) => s + d.score, 0);
+
+  // 满足度：JD 要求的部分，候选人覆盖得多好（0..1）
+  const matchRatio = demandedWeight > 0 ? demandedScore / demandedWeight : 0;
+
+  // 广度：JD 要求的权重占候选人全部能力的比例（0..1）
+  const breadth = totalWeight > 0 ? demandedWeight / totalWeight : 0;
+
+  // 满足度是主信号（70%），广度用于奖励"能用上更多能力"的高层次岗位（30%）
+  const dimensionScore = 100 * (matchRatio * 0.7 + breadth * 0.3);
 
   // ── 2. 领域加分 ──
   const domainHits = [];
