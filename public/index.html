@@ -557,6 +557,61 @@ textarea {
 .empty-title { font-size: 14px; font-weight: 700; margin-bottom: 5px; }
 .empty-desc { font-size: 13px; color: var(--ink-muted); margin-bottom: 16px; }
 
+/* 首次使用引导 */
+.guide {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 28px 26px;
+  box-shadow: var(--shadow-card);
+}
+.guide-head { max-width: 62ch; }
+.guide-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  margin-bottom: 7px;
+}
+.guide-desc {
+  font-size: 13.5px;
+  color: var(--ink-muted);
+  line-height: 1.65;
+}
+.guide-steps {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r-input);
+  overflow: hidden;
+}
+.guide-steps li {
+  background: var(--surface);
+  padding: 16px 18px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.guide-num {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  margin-top: 1px;
+}
+.guide-step-title { font-size: 13.5px; font-weight: 700; margin-bottom: 3px; }
+.guide-step-desc { font-size: 12.5px; color: var(--ink-muted); line-height: 1.6; }
+.guide-actions { display: flex; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+
 .skeleton {
   background: linear-gradient(90deg, var(--surface-sunken) 25%, #e8e7e2 50%, var(--surface-sunken) 75%);
   background-size: 200% 100%;
@@ -696,6 +751,12 @@ code {
   .stat-num { font-size: 22px; }
 
   .kv { grid-template-columns: 78px 1fr; }
+
+  .guide { padding: 20px 16px; }
+  .guide-title { font-size: 16px; }
+  .guide-steps li { padding: 13px 14px; gap: 11px; }
+  .guide-actions { gap: 8px; }
+  .guide-actions .btn { flex: 1 1 auto; }
 
   pre.report { font-size: 11px; padding: 12px; }
 }
@@ -1091,13 +1152,66 @@ function renderJobs(jobs) {
 
   if (!jobs.length) {
     const hasFilter = $('filterGrade').value || $('filterStatus').value || $('searchKw').value.trim();
+
+    // 有筛选条件 → 简化提示，不高亮引导
+    if (hasFilter) {
+      box.innerHTML = `
+        <div class="empty">
+          <div class="empty-title">没有符合条件的岗位</div>
+          <div class="empty-desc">调整筛选条件，或清空搜索关键词。</div>
+          <button class="btn btn-primary" onclick="clearFilters()">清空筛选</button>
+        </div>`;
+      return;
+    }
+
+    // 首次使用 → 三步引导
     box.innerHTML = `
-      <div class="empty">
-        <div class="empty-title">${hasFilter ? '没有符合条件的岗位' : '还没有收录岗位'}</div>
-        <div class="empty-desc">${hasFilter
-          ? '调整筛选条件，或清空搜索关键词。'
-          : '把 JD 文本粘贴到「导入」页，系统会自动解析、评分并排序。'}</div>
-        <button class="btn btn-primary" onclick="switchView('import')">${hasFilter ? '去导入新岗位' : '开始导入'}</button>
+      <div class="guide">
+        <div class="guide-head">
+          <div class="guide-title">开始你的第一次匹配</div>
+          <div class="guide-desc">
+            在招聘网站上复制岗位描述，粘贴进来。系统会按你的能力画像打分排序，
+            并跟踪每个岗位的投递进度。
+          </div>
+        </div>
+
+        <ol class="guide-steps">
+          <li>
+            <span class="guide-num">1</span>
+            <div>
+              <div class="guide-step-title">复制 JD</div>
+              <div class="guide-step-desc">
+                在 BOSS 直聘、智联、猎聘或公司官网，选中岗位描述全文复制。
+                本工具不登录平台账号，只处理你粘贴的文本。
+              </div>
+            </div>
+          </li>
+          <li>
+            <span class="guide-num">2</span>
+            <div>
+              <div class="guide-step-title">粘贴导入</div>
+              <div class="guide-step-desc">
+                一次可粘贴多份，用单独一行 <code>===</code> 分隔即批量导入。
+                系统自动识别公司、职位、薪资并去重。
+              </div>
+            </div>
+          </li>
+          <li>
+            <span class="guide-num">3</span>
+            <div>
+              <div class="guide-step-title">按序投递并复盘</div>
+              <div class="guide-step-desc">
+                优先投 S / A 级岗位，用卡片下方的状态框推进进度。
+                回复率、面试率会实时统计，用来判断策略是否有效。
+              </div>
+            </div>
+          </li>
+        </ol>
+
+        <div class="guide-actions">
+          <button class="btn btn-primary" onclick="switchView('import')">导入第一份 JD</button>
+          <button class="btn btn-ghost" onclick="switchView('settings')">先看评分规则</button>
+        </div>
       </div>`;
     return;
   }
@@ -1511,6 +1625,13 @@ async function loadSettings() {
 /* ═══════════════════════════════════════════
    视图切换与筛选
    ═══════════════════════════════════════════ */
+
+function clearFilters() {
+  document.getElementById('filterGrade').value = '';
+  document.getElementById('filterStatus').value = '';
+  document.getElementById('searchKw').value = '';
+  loadJobs();
+}
 
 function switchView(name) {
   document.querySelectorAll('.nav button').forEach((b) => {
