@@ -241,6 +241,29 @@ textarea { min-height:200px; line-height:1.7; resize:vertical; }
 .md-doc strong { font-weight:600; color:var(--ink); }
 .md-doc code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); padding:1px 5px; border-radius:4px; color:var(--brand-deep); }
 .md-doc hr { border:none; border-top:1px solid var(--line); margin:28px 0; }
+.story-type {
+  display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500;
+  padding:4px 10px; border-radius:999px; background:var(--bg-soft-2); color:var(--ink-2);
+}
+.story-type.ok { background:rgba(34,197,94,.1); color:#15803d; }
+.story-type.miss { background:#fef3c7; color:#b45309; }
+.story {
+  border:1px solid var(--line); border-radius:var(--r-card); padding:14px 16px; margin-bottom:10px;
+  background:#fff;
+}
+.story-head { display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; }
+.story-title { font-size:14px; font-weight:600; flex:1; min-width:0; line-height:1.5; }
+.story-star { display:grid; gap:6px; font-size:13px; line-height:1.6; }
+.story-star dt { font-weight:600; color:var(--ink-3); font-size:11.5px; letter-spacing:.03em; }
+.story-star dd { margin:0 0 6px; color:var(--ink-2); }
+.story-star .miss { color:var(--ink-4); font-style:italic; }
+.level-badge {
+  display:inline-block; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;
+}
+.level-badge.up { background:#fee2e2; color:#b91c1c; }
+.level-badge.same { background:#dcfce7; color:#15803d; }
+.level-badge.down { background:#fef3c7; color:#b45309; }
+.level-badge.unknown { background:var(--bg-soft-2); color:var(--ink-3); }
 .steps-ol { padding-left:22px; margin:0; }
 .steps-ol li { margin-bottom:10px; line-height:1.7; color:var(--ink-2); }
 .steps-ol li strong { color:var(--ink); }
@@ -549,6 +572,20 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         </div>
 
         <div id="resumeResult" style="margin-top:18px"></div>
+      </div>
+
+      <div class="card" id="storiesCard">
+        <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:6px">
+          <div style="flex:1;min-width:220px">
+            <h3 class="card-title" style="margin-bottom:4px">面试故事库</h3>
+            <p class="card-desc" style="margin:0">
+              把经历拆成 STAR 骨架。同一个故事可以在不同岗位复用，补过的细节会保留。
+            </p>
+          </div>
+          <button class="btn btn-sm btn-primary" id="btnSeedStories">从简历生成</button>
+        </div>
+        <div id="storyGaps" style="margin-top:16px"></div>
+        <div id="storyList" style="margin-top:16px"></div>
       </div>
 
       <div class="card">
@@ -1127,6 +1164,7 @@ async function loadResume() {
     if ($('pName')) $('pName').value = s.name || '';
     if ($('pYears')) $('pYears').value = s.years || '';
     if ($('pCity')) $('pCity').value = s.city || '';
+    loadStories();
   } catch (e) {
     S.hasResume = false;
     box.innerHTML = alertHTML('简历加载失败：' + esc(e.message), 'error');
@@ -1545,6 +1583,174 @@ function renderPrepCards(d) {
 }
 
 /* ═══════════════════════════════════════════
+   职级策略与谈薪
+   ═══════════════════════════════════════════ */
+
+async function loadStrategy(jobId) {
+  const box = $('strategyBox');
+  if (!box) return;
+  box.innerHTML = '<div class="skeleton sk-line" style="width:40%;height:14px"></div>';
+
+  try {
+    const d = await api('/api/jobs/' + encodeURIComponent(jobId) + '/strategy');
+    const lv = d.level || {};
+    const sa = d.salary || {};
+
+    const cls = { 上浮: 'up', 平级: 'same', 降级: 'down' }[lv.positioning] || 'unknown';
+
+    box.innerHTML = '<div class="card" style="margin-top:20px">'
+      + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px">'
+      + '<h3 class="card-title" style="margin:0">职级与谈薪</h3>'
+      + '<span class="level-badge ' + cls + '">' + esc(lv.positioning || '未知') + '</span>'
+      + (lv.requiredYears
+        ? '<span class="tag">要求 ' + lv.requiredYears + ' 年</span><span class="tag">你 ' + lv.myYears + ' 年</span>'
+        : '')
+      + (sa.hasData ? '<span class="tag tag-brand">' + esc(sa.range) + (sa.months > 12 ? ' · ' + sa.months + '薪' : '') + '</span>' : '')
+      + (sa.hasData ? '<span class="tag">年包约 ' + sa.annualWan + ' 万</span>' : '')
+      + '</div>'
+      + '<div style="font-size:13.5px;line-height:1.7;color:var(--ink-2);margin-bottom:8px">'
+      + '<b>为什么这样判断：</b>' + esc(lv.reason || '') + '</div>'
+      + '<div class="alert alert-info" style="margin-bottom:14px">'
+      + '<b>应对策略：</b>' + esc(lv.strategy || '') + '</div>'
+      + (sa.hasData
+        ? '<div class="sec-t" style="font-size:11.5px;font-weight:600;color:var(--ink-3);'
+          + 'letter-spacing:.04em;margin:0 0 10px">谈薪要点</div>'
+          + (sa.tips || []).map((tp) => '<div class="li" style="display:flex;gap:8px;font-size:13px;'
+            + 'line-height:1.65;margin-bottom:8px;color:var(--ink-2)">'
+            + '<span style="flex:none;width:4px;height:4px;border-radius:50%;background:var(--brand);margin-top:8px"></span>'
+            + '<span>' + esc(tp) + '</span></div>').join('')
+        : '<div style="font-size:13px;color:var(--ink-3)">' + esc(sa.note || '') + '</div>')
+      + '</div>';
+  } catch (e) {
+    box.innerHTML = '';
+  }
+}
+
+/* ═══════════════════════════════════════════
+   面试故事库
+   ═══════════════════════════════════════════ */
+
+async function loadStories() {
+  const listBox = $('storyList');
+  const gapsBox = $('storyGaps');
+  if (!listBox) return;
+  listBox.innerHTML = skList(1);
+
+  try {
+    const d = await api('/api/stories');
+
+    // 类型覆盖
+    if (gapsBox) {
+      gapsBox.innerHTML = '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+        + (d.gaps || []).map((g) =>
+          '<span class="story-type ' + (g.ok ? 'ok' : 'miss') + '" title="' + esc(g.hint) + '">'
+          + (g.ok ? '✓ ' : '! ') + esc(g.name) + ' ' + g.count + '</span>').join('')
+        + '</div>'
+        + ((d.gaps || []).some((g) => !g.ok)
+          ? '<div class="alert alert-warn" style="margin:12px 0 0;font-size:13px">'
+            + '标 <b>!</b> 的类型故事不够。行为面试常问「线上出过什么问题」「跨团队怎么推」，'
+            + '建议补 1-2 个对应故事。</div>'
+          : '');
+    }
+
+    if (!d.total) {
+      listBox.innerHTML = '<div style="font-size:13.5px;color:var(--ink-3)">'
+        + '还没有故事。点右上角「从简历生成」，会把简历要点自动拆成 STAR 骨架。</div>';
+      return;
+    }
+
+    listBox.innerHTML = (d.stories || []).map((s) => {
+      const star = s.star || {};
+      const field = (label, val) => {
+        const missing = !val || /^（补/.test(val);
+        return '<dt>' + label + '</dt><dd class="' + (missing ? 'miss' : '') + '">'
+          + esc(val || '（待补充）') + '</dd>';
+      };
+      return '<div class="story">'
+        + '<div class="story-head">'
+        + '<span class="story-type ok">' + esc(d.types[s.type]?.name || s.type) + '</span>'
+        + '<div class="story-title">' + esc(s.title) + '</div>'
+        + '<button class="btn btn-sm" data-edit="' + esc(s.id) + '">补充</button>'
+        + '<button class="btn btn-sm btn-danger" data-del="' + esc(s.id) + '">删</button>'
+        + '</div>'
+        + '<dl class="story-star">'
+        + field('背景', star.background)
+        + field('任务', star.task)
+        + field('动作', star.action)
+        + field('结果', star.result)
+        + '</dl>'
+        + ((s.keywords || []).length
+          ? '<div class="tags" style="margin-top:8px">'
+            + s.keywords.slice(0, 6).map((k) => '<span class="tag">' + esc(k) + '</span>').join('')
+            + '</div>' : '')
+        + '</div>';
+    }).join('');
+
+    listBox.querySelectorAll('[data-del]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        if (!confirm('删除这个故事？')) return;
+        try { await api('/api/stories/' + b.dataset.del, { method: 'DELETE' }); loadStories(); }
+        catch (e) { alert('删除失败：' + e.message); }
+      });
+    });
+
+    listBox.querySelectorAll('[data-edit]').forEach((b) => {
+      b.addEventListener('click', () => editStory(d.stories.find((s) => s.id === b.dataset.edit)));
+    });
+  } catch (e) {
+    listBox.innerHTML = alertHTML('故事库加载失败：' + esc(e.message), 'error');
+  }
+}
+
+/** 补故事细节：用 prompt 逐项问，最省事 */
+async function editStory(s) {
+  if (!s) return;
+  const star = { ...(s.star || {}) };
+  const ask = (label, cur) => prompt(label + '\n（留空则不修改）', /^（补/.test(cur) ? '' : cur);
+
+  const bg = ask('背景：当时业务遇到了什么问题？', star.background || '');
+  if (bg) star.background = bg;
+  const ac = ask('动作：你具体做了什么？', star.action || '');
+  if (ac) star.action = ac;
+  const rs = ask('结果：有什么数字？（提升多少 / 缩短多少 / 影响多少用户）', star.result || '');
+  if (rs) star.result = rs;
+  const tk = ask('面试官可能追问什么？（多个用 / 分隔）', (s.followups || []).join(' / '));
+
+  try {
+    await api('/api/stories/' + s.id, {
+      method: 'PATCH',
+      body: {
+        star,
+        followups: tk ? tk.split('/').map((x) => x.trim()).filter(Boolean) : s.followups,
+      },
+    });
+    loadStories();
+  } catch (e) {
+    alert('保存失败：' + e.message);
+  }
+}
+
+if ($('btnSeedStories')) $('btnSeedStories').addEventListener('click', async () => {
+  const btn = $('btnSeedStories');
+  btn.disabled = true;
+  const old = btn.textContent;
+  btn.textContent = '生成中…';
+  try {
+    const d = await api('/api/stories/seed', { method: 'POST' });
+    await loadStories();
+    if (d.added === 0) {
+      $('storyGaps').insertAdjacentHTML('afterbegin',
+        alertHTML('简历里的要点都已经生成过故事了。补充新简历内容后可以再生成。', 'info'));
+    }
+  } catch (e) {
+    alert('生成失败：' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+});
+
+/* ═══════════════════════════════════════════
    浏览器扩展 · 令牌管理
    ═══════════════════════════════════════════ */
 
@@ -1694,6 +1900,7 @@ async function openDetail(id) {
     const { job } = await api('/api/jobs/' + encodeURIComponent(id));
     S.currentJob = job;
     renderDetail(job);
+    loadStrategy(job.id);
   } catch (e) {
     $('detailContent').innerHTML = alertHTML('加载失败：' + esc(e.message), 'error');
   }
@@ -1735,6 +1942,7 @@ function renderDetail(job) {
     + (good ? '<div class="tags">' + good + '</div>' : '')
     + (job.years?.note ? '<p class="card-desc" style="margin:16px 0 0">年限判断：' + esc(job.years.note) + '</p>' : '')
     + '</div>'
+    + '<div id="strategyBox"></div>'
     + '<div class="card"><h3 class="card-title">JD 原文</h3>'
     + '<div class="jd-body" style="max-height:460px">' + esc(job.text || '（无原文）') + '</div></div>';
 }

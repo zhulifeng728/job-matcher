@@ -31,6 +31,11 @@ import {
 import { tailorResume, buildStudyPlan } from './tailor.js';
 import { generatePrepDoc, hasAI } from './deep-prep.js';
 import { renderMarkdown } from './markdown.js';
+import { buildStrategy } from './level.js';
+import {
+  loadStories, seedStoriesFromResume, updateStory, deleteStory,
+  pickStoriesForJob, storyGaps, STORY_TYPES, markStoryUsed,
+} from './stories.js';
 import {
   registerUser, verifyUser, publicUser, userFromRequest,
   issueSession, sessionCookie, clearSessionCookie, userContext,
@@ -685,6 +690,71 @@ const routes = {
       missing: (advice?.missingKeywords || []).slice(0, 8),
       corrections: saved.corrections || [],
       url: sourceUrl,
+    };
+  },
+
+  // ─────────── 职级与谈薪 ───────────
+
+  'GET /api/jobs/:id/strategy': async (q, params) => {
+    const v = validateId(params.id);
+    if (!v.ok) return { error: v.error, status: 400 };
+
+    const job = loadJobs().find((j) => j.id === v.id);
+    if (!job) return { error: '岗位不存在', status: 404 };
+
+    const profile = loadProfile();
+    if (!profile) return { error: '还没有导入简历', status: 400 };
+
+    return buildStrategy(profile, job);
+  },
+
+  // ─────────── 面试故事库 ───────────
+
+  'GET /api/stories': async () => {
+    const list = loadStories();
+    return {
+      stories: list,
+      types: STORY_TYPES,
+      gaps: storyGaps(),
+      total: list.length,
+    };
+  },
+
+  /** 从简历生成故事骨架（不覆盖已有） */
+  'POST /api/stories/seed': async () => {
+    const profile = loadProfile();
+    if (!profile) return { error: '还没有导入简历', status: 400 };
+    const r = seedStoriesFromResume(profile);
+    return { ok: true, added: r.added, total: r.stories.length, gaps: storyGaps() };
+  },
+
+  'PATCH /api/stories/:id': async (q, params, body) => {
+    const s = updateStory(params.id, body);
+    return s ? { ok: true, story: s } : { error: '故事不存在', status: 404 };
+  },
+
+  'DELETE /api/stories/:id': async (q, params) => {
+    return deleteStory(params.id) ? { ok: true } : { error: '故事不存在', status: 404 };
+  },
+
+  /** 为某个岗位挑故事 */
+  'GET /api/jobs/:id/stories': async (q, params) => {
+    const v = validateId(params.id);
+    if (!v.ok) return { error: v.error, status: 400 };
+    const job = loadJobs().find((j) => j.id === v.id);
+    if (!job) return { error: '岗位不存在', status: 404 };
+    const profile = loadProfile();
+    if (!profile) return { error: '还没有导入简历', status: 400 };
+
+    const picked = pickStoriesForJob(job, profile, 5);
+    for (const s of picked) markStoryUsed(s.id, job.id);
+
+    return {
+      stories: picked.map((s) => ({
+        id: s.id, type: s.type, typeName: STORY_TYPES[s.type]?.name || s.type,
+        title: s.title, star: s.star, keywords: s.keywords,
+        score: s._score, usedCount: (s.usedBy || []).length,
+      })),
     };
   },
 
