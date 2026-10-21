@@ -16,11 +16,12 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { timingSafeEqual, createHash } from 'node:crypto';
+import { inflateRawSync } from 'node:zlib';
 
 import { parseJD, parseBatch } from './parser.js';
 import { scoreJob } from './scoring.js';
 import {
-  loadJobs, saveJobs, loadProfile, upsertJobs, setJobStatus,
+  loadJobs, saveJobs, loadProfile, saveProfile, hasOwnProfile, upsertJobs, setJobStatus, readJSON,
   computeStats, backupJobs, APPLICATION_STATUS, isValidStatus,
 } from './store.js';
 import {
@@ -28,6 +29,12 @@ import {
   generateBatch, testConnection, listProviders,
 } from './ai.js';
 import { tailorResume, buildStudyPlan } from './tailor.js';
+import {
+  registerUser, verifyUser, publicUser, userFromRequest,
+  issueSession, sessionCookie, clearSessionCookie, userContext,
+  hasUsers, userDataDir,
+} from './auth.js';
+import { parseResume, buildProfileFromResume, summarizeImport } from './resume.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -331,6 +338,81 @@ function salaryRank(salary) {
   return one ? Number(one[1]) : 0;
 }
 
+// ═══════════════════════ DOCX 文本提取 ═══════════════════════
+
+/**
+ * 从 .docx 里提取纯文本（零依赖）
+ *
+ * .docx 本质是 zip，正文在 word/document.xml。
+ * 这里手写最小 zip 解析：只读中央目录，找到目标条目，
+ * 用 zlib.inflateRawSync 解压，再剥掉 XML 标签。
+ */
+function extractDocxText(base64) {
+  const buf = Buffer.from(String(base64), 'base64');
+  if (buf.length < 100 || buf.readUInt32LE(0) !== 0x04034b50) {
+    throw new Error('不是有效的 docx 文件');
+  }
+
+  // 找 End of Central Directory（EOCD 在末尾，签名 0x06054b50）
+  let eocd = -1;
+  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 66000); i--) {
+    if (buf.readUInt32LE(i) === 0x06054b50) { eocd = i; break; }
+  }
+  if (eocd < 0) throw new Error('zip 结构不完整');
+
+  const cdCount = buf.readUInt16LE(eocd + 10);
+  let cdOffset = buf.readUInt32LE(eocd + 16);
+
+  let target = null;
+
+  for (let n = 0; n < cdCount; n++) {
+    if (buf.readUInt32LE(cdOffset) !== 0x02014b50) break;
+
+    const nameLen = buf.readUInt16LE(cdOffset + 28);
+    const extraLen = buf.readUInt16LE(cdOffset + 30);
+    const commentLen = buf.readUInt16LE(cdOffset + 32);
+    const localOffset = buf.readUInt32LE(cdOffset + 42);
+    const name = buf.slice(cdOffset + 46, cdOffset + 46 + nameLen).toString('utf-8');
+
+    if (name === 'word/document.xml') {
+      target = { localOffset };
+      break;
+    }
+    cdOffset += 46 + nameLen + extraLen + commentLen;
+  }
+
+  if (!target) throw new Error('docx 里没找到正文（可能是 .doc 旧格式，请另存为 .docx）');
+
+  // 读本地文件头，定位数据起点
+  const lo = target.localOffset;
+  if (buf.readUInt32LE(lo) !== 0x04034b50) throw new Error('zip 条目损坏');
+
+  const lNameLen = buf.readUInt16LE(lo + 26);
+  const lExtraLen = buf.readUInt16LE(lo + 28);
+  const compSize = buf.readUInt32LE(lo + 18);
+  const dataStart = lo + 30 + lNameLen + lExtraLen;
+
+  const compressed = buf.slice(dataStart, dataStart + compSize);
+  let xml;
+  try {
+    xml = inflateRawSync(compressed).toString('utf-8');
+  } catch {
+    xml = compressed.toString('utf-8');   // 未压缩存储的情况
+  }
+
+  // 段落 → 换行；制表 → 空格；剥标签
+  return xml
+    .replace(/<w:p[ >]/g, '\n<w:p ')
+    .replace(/<w:tab[^>]*\/>/g, '\t')
+    .replace(/<w:br[^>]*\/>/g, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 // ═══════════════════════ 路由表 ═══════════════════════
 
 const routes = {
@@ -347,35 +429,140 @@ const routes = {
     authed: isAuthed(req),
   }),
 
-  'POST /api/auth/login': async (q, p, body, req, res) => {
-    if (!TOKEN) return { ok: true, message: '未启用访问口令（本地模式）' };
+  // ─────────── 账号 ───────────
 
-    // 登录接口单独限流，防爆破
-    const rl = checkRate(`login:${clientIp(req)}`, 10);
+  /** 注册 */
+  'POST /api/auth/register': async (q, p, body, req, res) => {
+    const rl = checkRate(`reg:${clientIp(req)}`, 10);
     if (!rl.ok) return { error: '尝试过于频繁，请稍后再试', status: 429 };
 
+    const r = registerUser(body.username, body.password, body.displayName);
+    if (!r.ok) return { error: r.error, status: 400 };
+
+    const token = issueSession(r.user.id);
+    res.setHeader('Set-Cookie', sessionCookie(req, token));
+    return { ok: true, user: r.user };
+  },
+
+  /** 登录 */
+  'POST /api/auth/login': async (q, p, body, req, res) => {
+    const rl = checkRate(`login:${clientIp(req)}`, 15);
+    if (!rl.ok) return { error: '尝试过于频繁，请稍后再试', status: 429 };
+
+    const r = verifyUser(body.username, body.password);
+    if (!r.ok) return { error: r.error, status: 401 };
+
+    const token = issueSession(r.user.id);
+    res.setHeader('Set-Cookie', sessionCookie(req, token));
+    return { ok: true, user: r.user };
+  },
+
+  /** 退出 */
+  'POST /api/auth/logout': async (q, p, b, req, res) => {
+    res.setHeader('Set-Cookie', clearSessionCookie());
+    return { ok: true };
+  },
+
+  /** 当前登录态 + 是否需要先导入简历 */
+  'GET /api/auth/me': async (q, p, b, req) => {
+    const user = userFromRequest(req);
+    if (!user) return { user: null, hasResume: false };
+
+    // 在用户上下文里检查画像
+    return userContext.run({ userId: user.id }, async () => ({
+      user,
+      hasResume: hasOwnProfile(),
+      jobCount: loadJobs().length,
+    }));
+  },
+
+  /** 旧口令登录（保留兼容，多用户模式下停用） */
+  'POST /api/auth/token': async (q, p, body, req, res) => {
+    if (!TOKEN) return { ok: true, message: '未启用访问口令' };
     const input = str(body.token, 200).trim();
-    if (!input || !safeEqual(input, TOKEN)) {
-      return { error: '口令错误', status: 401 };
+    if (!input || !safeEqual(input, TOKEN)) return { error: '口令错误', status: 401 };
+    res.setHeader('Set-Cookie', buildAuthCookie(req));
+    return { ok: true };
+  },
+
+  // ─────────── 简历 ───────────
+
+  /** 读取当前用户的画像（含简历摘要） */
+  'GET /api/resume': async () => {
+    const p = loadProfile();
+    if (!p) return { imported: false };
+    return {
+      imported: hasOwnProfile(),
+      summary: summarizeImport(p),
+      profile: p.profile,
+      highlights: p.highlights || [],
+      meta: p.meta || {},
+    };
+  },
+
+  /** 导入简历：纯文本 或 .docx 的 base64 */
+  'POST /api/resume': async (q, p, body) => {
+    let text = str(body.text, 200_000);
+
+    // 支持 .docx（zip 里的 word/document.xml）
+    if (!text && body.docxBase64) {
+      try {
+        text = extractDocxText(String(body.docxBase64));
+      } catch (e) {
+        return { error: 'DOCX 解析失败：' + e.message, status: 400 };
+      }
     }
 
-    res.setHeader('Set-Cookie', buildAuthCookie(req));
-    return { ok: true, message: '登录成功' };
+    if (!text || !text.trim()) return { error: '简历内容为空', status: 400 };
+    if (text.trim().length < 80) return { error: '简历内容太短，至少 80 字才能有效解析', status: 400 };
+
+    const parsed = parseResume(text);
+    const template = readJSON(resolve(__dirname, '../data/presets/profile.json'), null);
+    if (!template) return { error: '画像模板缺失', status: 500 };
+
+    const profile = buildProfileFromResume(parsed, template);
+    saveProfile(profile);
+
+    return {
+      ok: true,
+      summary: summarizeImport(profile),
+      highlights: profile.highlights,
+      meta: profile.meta,
+    };
+  },
+
+  /** 手动修正画像基础信息（年限、城市等） */
+  'PATCH /api/resume': async (q, p, body) => {
+    const prof = loadProfile();
+    if (!prof) return { error: '还没有导入简历', status: 400 };
+
+    if (body.name !== undefined) prof.profile.name = str(body.name, 40);
+    if (body.years !== undefined) prof.profile.years = Math.max(0, Math.min(50, Number(body.years) || 0));
+    if (body.city !== undefined) prof.profile.currentCity = str(body.city, 20);
+    if (body.headline !== undefined) prof.profile.headline = str(body.headline, 80);
+
+    saveProfile(prof);
+    return { ok: true, summary: summarizeImport(prof) };
   },
 
   // ─────────── 状态与元信息 ───────────
 
-  'GET /api/status': async () => {
+  'GET /api/status': async (q, p, b, req) => {
     const profile = loadProfile();
     const jobs = loadJobs();
+    const user = userFromRequest(req);
     return {
       ok: true,
+      user,
+      multiUser: true,
+      hasResume: hasOwnProfile(),
       profileLoaded: Boolean(profile),
       profileName: profile?.profile?.name || '',
+      profileMeta: profile?.meta || null,
       jobsCount: jobs.length,
-      ai: getAIPublicStatus(),      // 已脱敏，不含 Key
+      ai: getAIPublicStatus(),
       quota: quotaStatus(),
-      requiresLogin: Boolean(TOKEN),
+      requiresLogin: true,
     };
   },
 
@@ -834,7 +1021,11 @@ function buildCSV(jobs, minScore) {
 const PUBLIC_ROUTES = new Set([
   'GET /api/health',
   'GET /api/auth/required',
+  'GET /api/auth/me',
   'POST /api/auth/login',
+  'POST /api/auth/logout',
+  'POST /api/auth/register',
+  'POST /api/auth/token',
 ]);
 
 /** 需要额外限流的 AI 路由 */
@@ -883,8 +1074,12 @@ const server = http.createServer(async (req, res) => {
 
   if (!handler) return json(res, { error: '接口不存在' }, 404);
 
-  // 鉴权
-  if (!PUBLIC_ROUTES.has(routeKey) && !isAuthed(req)) {
+  // ── 识别当前用户（多用户模式）──
+  const user = userFromRequest(req);
+
+  // 鉴权：登录用户放行；否则回退到单用户口令模式（本地/演示）
+  const needsAuth = !PUBLIC_ROUTES.has(routeKey);
+  if (needsAuth && !user && !isAuthed(req)) {
     return json(res, { error: '请先登录', needLogin: true }, 401);
   }
 
@@ -907,7 +1102,10 @@ const server = http.createServer(async (req, res) => {
       ? await readBody(req)
       : {};
 
-    const result = await handler(url.searchParams, params, body, req, res);
+    // 把 userId 注入 AsyncLocalStorage，数据层据此选择用户目录
+    const result = await userContext.run({ userId: user?.id || null }, () =>
+      handler(url.searchParams, params, body, req, res)
+    );
 
     // handler 返回 { status: n, ...payload } 时自定义状态码
     if (result && typeof result === 'object' && Number.isInteger(result.status)) {

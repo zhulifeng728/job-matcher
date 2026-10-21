@@ -267,6 +267,9 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
 .login-card { width:100%; max-width:420px; background:#fff; border-radius:16px; box-shadow:var(--shadow-3); padding:40px; }
 .login-logo { width:48px; height:48px; border-radius:12px; background:var(--grad); display:grid; place-items:center; color:#fff; font-weight:700; font-size:15px; margin-bottom:22px; }
 .login-title { font-size:22px; font-weight:700; margin:0 0 8px; }
+.auth-tabs { display:flex; gap:6px; margin:0 0 22px; border-bottom:1px solid var(--line); }
+.auth-tabs button { flex:1; padding:10px 0; border:none; background:transparent; font-size:15px; font-weight:500; color:var(--ink-3); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; }
+.auth-tabs button.on { color:var(--brand); font-weight:600; border-bottom-color:var(--brand); }
 .login-desc { font-size:14px; color:var(--ink-3); margin:0 0 26px; line-height:1.65; }
 
 /* 页脚 */
@@ -326,13 +329,27 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
   <div class="login-card">
     <div class="login-logo">AI</div>
     <h1 class="login-title">AI 求职助手</h1>
-    <p class="login-desc">基于真实 JD 的简历优化与面试复习。请输入访问口令进入。</p>
-    <form id="loginForm">
+    <p class="login-desc" id="loginDesc">先导入你的简历，再按岗位改简历、备面试。</p>
+
+    <div class="auth-tabs">
+      <button type="button" id="tabLogin" class="on" onclick="switchAuth('login')">登录</button>
+      <button type="button" id="tabRegister" onclick="switchAuth('register')">注册</button>
+    </div>
+
+    <form id="authForm" autocomplete="on">
       <div class="field">
-        <label class="field-label" for="loginToken">访问口令</label>
-        <input type="password" id="loginToken" autocomplete="current-password" placeholder="输入口令" required>
+        <label class="field-label" for="authUser">邮箱</label>
+        <input type="text" id="authUser" autocomplete="username" placeholder="you@example.com" required>
       </div>
-      <button type="submit" class="btn btn-primary" style="width:100%">进入</button>
+      <div class="field">
+        <label class="field-label" for="authPass">密码</label>
+        <input type="password" id="authPass" autocomplete="current-password" placeholder="至少 6 位" required>
+      </div>
+      <div class="field" id="nameField" hidden>
+        <label class="field-label" for="authName">称呼（可选）</label>
+        <input type="text" id="authName" autocomplete="nickname" placeholder="怎么称呼你">
+      </div>
+      <button type="submit" class="btn btn-primary" id="authSubmit" style="width:100%">登录</button>
     </form>
     <div id="loginError" style="margin-top:16px"></div>
   </div>
@@ -347,13 +364,16 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
       </a>
       <nav class="nav-links" role="tablist" aria-label="主导航">
         <button role="tab" data-view="home" aria-selected="true">首页</button>
+        <button role="tab" data-view="resume" aria-selected="false">我的简历</button>
         <button role="tab" data-view="optimize" aria-selected="false">简历优化</button>
         <button role="tab" data-view="prep" aria-selected="false">技术复习</button>
         <button role="tab" data-view="jobs" aria-selected="false">职位列表</button>
         <button role="tab" data-view="settings" aria-selected="false">设置</button>
       </nav>
       <div class="spacer"></div>
+      <span id="userChip" style="font-size:13px;color:var(--ink-3)"></span>
       <button class="btn btn-sm" onclick="switchView('import')">＋ 导入 JD</button>
+      <button class="btn btn-sm btn-ghost" onclick="doLogout()">退出</button>
     </div>
   </header>
 
@@ -453,6 +473,57 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
             </p>
           </details>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 我的简历 -->
+  <section class="view" id="view-resume" hidden>
+    <div class="page">
+      <div class="page-header">
+        <h2>我的简历</h2>
+        <p>这是整个产品的基础：评分、简历优化、复习清单都基于你这份简历。</p>
+      </div>
+
+      <div id="resumeCurrent"></div>
+
+      <div class="card">
+        <h3 class="card-title">导入 / 更新简历</h3>
+        <p class="card-desc">
+          粘贴简历全文，或上传 .txt / .md / .docx 文件。会按章节和列表行自动拆成「可被 JD 匹配的要点」。
+          <br>PDF 请先复制文字后粘贴（无第三方依赖，不解析 PDF 二进制）。
+        </p>
+
+        <div class="field">
+          <label class="field-label" for="resumeText">简历全文</label>
+          <textarea id="resumeText" placeholder="把简历全文粘进来。
+
+建议格式：用「个人优势 / 专业技能 / 工作经历 / 项目经历 / 教育经历」分段，
+工作内容用「- 」或「1. 」开头的列表行，抽取效果最好。"></textarea>
+        </div>
+
+        <div class="toolbar">
+          <button class="btn btn-primary" id="btnImportResume">解析并保存</button>
+          <label class="btn" style="cursor:pointer">
+            上传文件
+            <input type="file" id="resumeFile" accept=".txt,.md,.markdown,.docx" hidden>
+          </label>
+          <button class="btn btn-ghost" id="btnLoadDemoResume">填入示例简历</button>
+          <span id="resumeStatus" style="font-size:13px;color:var(--ink-3)"></span>
+        </div>
+
+        <div id="resumeResult" style="margin-top:18px"></div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">基础信息</h3>
+        <p class="card-desc">自动识别可能不准，可以手动修正。年限会直接影响「是否 overqualified」的判断。</p>
+        <div class="field-row">
+          <div class="field"><label class="field-label" for="pName">姓名</label><input type="text" id="pName"></div>
+          <div class="field"><label class="field-label" for="pYears">工作年限</label><input type="text" id="pYears" placeholder="如 6"></div>
+          <div class="field"><label class="field-label" for="pCity">城市</label><input type="text" id="pCity" placeholder="如 北京"></div>
+        </div>
+        <button class="btn" id="btnSaveBasic">保存基础信息</button>
       </div>
     </div>
   </section>
@@ -710,6 +781,7 @@ const S = {
   exportText: '', exportFormat: 'md',
   optJob: null, prepJob: null,
   resumeCache: {}, prepCache: {},
+  user: null, hasResume: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -748,37 +820,116 @@ function skList(n = 2) {
 }
 
 /* ═══════════════════════════════════════════
-   登录
+   账号：登录 / 注册 / 退出
    ═══════════════════════════════════════════ */
 
-function showLogin() { $('loginPage').hidden = false; $('appPage').hidden = true; setTimeout(() => $('loginToken')?.focus(), 60); }
-function showApp() { $('loginPage').hidden = true; $('appPage').hidden = false; }
+let authMode = 'login';
 
-$('loginForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const token = $('loginToken').value.trim();
-  if (!token) return;
+function switchAuth(mode) {
+  authMode = mode;
+  $('tabLogin').classList.toggle('on', mode === 'login');
+  $('tabRegister').classList.toggle('on', mode === 'register');
+  $('nameField').hidden = mode !== 'register';
+  $('authSubmit').textContent = mode === 'login' ? '登录' : '注册并开始';
+  $('authPass').setAttribute('autocomplete', mode === 'login' ? 'current-password' : 'new-password');
   $('loginError').innerHTML = '';
+}
+
+function showLogin() {
+  $('loginPage').hidden = false;
+  $('appPage').hidden = true;
+  setTimeout(() => ($('authUser').value ? $('authPass') : $('authUser'))?.focus(), 60);
+}
+
+function showApp() {
+  $('loginPage').hidden = true;
+  $('appPage').hidden = false;
+}
+
+$('authForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = $('authUser').value.trim();
+  const password = $('authPass').value;
+  if (!username || !password) return;
+
+  $('loginError').innerHTML = '';
+  $('authSubmit').disabled = true;
+  const old = $('authSubmit').textContent;
+  $('authSubmit').textContent = authMode === 'login' ? '登录中…' : '注册中…';
+
   try {
-    await api('/api/auth/login', { method: 'POST', body: { token } });
-    showApp(); boot();
+    const path = authMode === 'login' ? '/api/auth/login' : '/api/auth/register';
+    const body = authMode === 'login'
+      ? { username, password }
+      : { username, password, displayName: $('authName').value.trim() };
+
+    await api(path, { method: 'POST', body });
+    $('authPass').value = '';
+    await boot();
   } catch (err) {
     $('loginError').innerHTML = alertHTML(esc(err.message), 'error');
+  } finally {
+    $('authSubmit').disabled = false;
+    $('authSubmit').textContent = old;
   }
 });
 
+async function doLogout() {
+  if (!confirm('退出登录？')) return;
+  try { await api('/api/auth/logout', { method: 'POST' }); } catch {}
+  S.user = null; S.jobs = []; S.resumeCache = {}; S.prepCache = {};
+  // 退出后重置为登录模式，避免沿用上次的注册 Tab
+  switchAuth('login');
+  $('authPass').value = '';
+  showLogin();
+}
+
 /* ═══════════════════════════════════════════
-   启动
+   启动（先确认登录 → 再确认简历 → 最后加载数据）
    ═══════════════════════════════════════════ */
 
 async function boot() {
+  let me;
   try {
-    const auth = await api('/api/auth/required');
-    if (auth.required && !auth.authed) { showLogin(); return; }
-    showApp();
-  } catch { showLogin(); return; }
+    me = await api('/api/auth/me');
+  } catch {
+    showLogin();
+    return;
+  }
+
+  if (!me.user) { showLogin(); return; }
+
+  S.user = me.user;
+  S.hasResume = Boolean(me.hasResume);
+  showApp();
+  updateUserChip();
+
   await loadJobs();
+  await loadResume();
+
+  // 已有简历 → 回到首页；首次使用 → 带到「我的简历」
+  if (me.hasResume) {
+    switchView('home');
+  } else {
+    switchView('resume');
+    setTimeout(() => {
+      const box = $('resumeCurrent');
+      if (box) box.insertAdjacentHTML('afterbegin', alertHTML(
+        '欢迎！第一步先导入你的简历 —— 之后所有评分和建议都会基于它。', 'info'));
+    }, 100);
+  }
 }
+
+function updateUserChip() {
+  const el = $('userChip');
+  if (!el) return;
+  const u = S.user;
+  el.textContent = u ? (u.displayName || u.username) : '';
+}
+
+/* ═══════════════════════════════════════════
+   数据加载
+   ═══════════════════════════════════════════ */
 
 async function loadJobs() {
   try {
@@ -791,7 +942,6 @@ async function loadJobs() {
     renderJobList(S.jobs);
     renderPickers(S.jobs);
     updateHomeStats(data);
-    if ($('view-jobs').hidden === false) renderJobList(S.jobs);
   } catch (e) {
     if ($('jobList')) $('jobList').innerHTML = alertHTML('加载失败：' + esc(e.message), 'error');
   }
@@ -829,6 +979,166 @@ function renderStatusFilter(options) {
     .map(([k, v]) => '<option value="' + esc(k) + '">' + esc(v.label) + '</option>').join('');
   if (cur) sel.value = cur;
 }
+
+/* ═══════════════════════════════════════════
+   我的简历
+   ═══════════════════════════════════════════ */
+
+async function loadResume() {
+  const box = $('resumeCurrent');
+  if (!box) return;
+  box.innerHTML = skList(1);
+  try {
+    const d = await api('/api/resume');
+    if (!d.imported) {
+      S.hasResume = false;
+      box.innerHTML = '<div class="alert alert-warn" style="margin-bottom:0">'
+        + '<strong>还没有导入简历。</strong>先导入一份，之后所有评分与建议才有依据。</div>';
+      return;
+    }
+    S.hasResume = true;
+    const s = d.summary;
+    const dimTags = (s.dimensions || []).map((x) =>
+      '<span class="tag tag-brand">' + esc(x.name) + ' ×' + x.count + '</span>').join('');
+
+    box.innerHTML = '<div class="card" style="margin-bottom:20px">'
+      + '<div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">'
+      + '<div style="flex:1;min-width:200px">'
+      + '<h3 class="card-title" style="margin-bottom:4px">' + esc(s.name || '未命名') + '</h3>'
+      + '<div style="font-size:14px;color:var(--ink-3)">' + esc(s.headline || '')
+      + (s.city ? ' · ' + esc(s.city) : '') + '</div></div>'
+      + '<div class="tags" style="margin:0">'
+      + '<span class="tag">' + esc(s.highlightCount) + ' 条要点</span>'
+      + '<span class="tag">' + esc(s.years || 0) + ' 年经验</span></div></div>'
+      + '<div class="tags" style="margin-top:16px">' + (dimTags || '<span class="tag">未识别到能力维度</span>') + '</div>'
+      + ((s.warnings || []).length
+        ? '<div class="alert alert-warn" style="margin:16px 0 0">'
+          + s.warnings.map((w) => '· ' + esc(w)).join('<br>') + '</div>' : '')
+      + '<details style="margin-top:16px"><summary style="cursor:pointer;font-size:14px;color:var(--ink-2)">'
+      + '查看抽到的 ' + esc(s.highlightCount) + ' 条要点</summary>'
+      + '<div style="margin-top:12px">' + (d.highlights || []).map((h, i) =>
+        '<div class="hl-item"><div class="hl-rank">' + (i + 1) + '</div><div style="flex:1;min-width:0">'
+        + '<div class="hl-text">' + esc(h.text) + '</div>'
+        + '<div class="hl-meta">' + (h.keywords || []).slice(0, 6).map((k) => '<span class="tag">' + esc(k) + '</span>').join('') + '</div>'
+        + '</div></div>').join('') + '</div></details></div>';
+
+    if ($('pName')) $('pName').value = s.name || '';
+    if ($('pYears')) $('pYears').value = s.years || '';
+    if ($('pCity')) $('pCity').value = s.city || '';
+  } catch (e) {
+    S.hasResume = false;
+    box.innerHTML = alertHTML('简历加载失败：' + esc(e.message), 'error');
+  }
+}
+
+const DEMO_RESUME = [
+  '张伟', '前端开发工程师 | 北京', '',
+  '个人优势',
+  '6 年前端开发经验，专注中后台系统与小程序。擅长把复杂业务拆成可复用组件。', '',
+  '专业技能',
+  'Vue3 / Vue2 / TypeScript / Vite / Webpack',
+  '微信小程序 / Taro / uni-app / 企业微信 JSSDK',
+  'Element Plus / 组件库建设 / Docker / CI/CD', '',
+  '工作经历',
+  '2021.03 - 至今   某某科技   高级前端工程师',
+  '- 负责 SaaS 管理后台开发，使用 Vue3 + TypeScript + Element Plus 构建',
+  '- 主导表单与权限模块重构，抽成通用组件，新增页面开发时间从 3 天缩短到 1 天',
+  '- 使用 Vite 重构构建流程，本地启动从 40 秒降到 4 秒',
+  '- 参与微前端改造，用 qiankun 把三个子系统接入主应用', '',
+  '2019.06 - 2021.02   某某网络   前端开发工程师',
+  '- 负责电商小程序，使用 Taro 实现一套代码适配微信与 H5',
+  '- 实现商品列表虚拟滚动，滚动帧率从 30fps 提升到 55fps',
+  '- 对接微信支付，处理支付回调与订单状态同步', '',
+  '教育经历',
+  '2015.09 - 2019.06   某某大学   本科',
+].join('\n');
+
+if ($('btnLoadDemoResume')) $('btnLoadDemoResume').addEventListener('click', () => {
+  $('resumeText').value = DEMO_RESUME;
+  $('resumeStatus').textContent = '已填入示例，可直接点「解析并保存」';
+});
+
+if ($('resumeFile')) $('resumeFile').addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const status = $('resumeStatus');
+  status.textContent = '读取中…';
+
+  try {
+    const nm = file.name.toLowerCase();
+    if (nm.endsWith('.docx')) {
+      const buf = await file.arrayBuffer();
+      let bin = '';
+      const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      const r = await api('/api/resume', { method: 'POST', body: { docxBase64: btoa(bin) } });
+      handleResumeImported(r);
+    } else {
+      const text = await file.text();
+      $('resumeText').value = text;
+      status.textContent = '已读取 ' + file.name + '（' + text.length + ' 字），点「解析并保存」';
+    }
+  } catch (err) {
+    status.textContent = '读取失败：' + err.message;
+  } finally {
+    e.target.value = '';
+  }
+});
+
+function handleResumeImported(r) {
+  const s = r.summary;
+  S.hasResume = true;
+  S.resumeCache = {}; S.prepCache = {};
+  $('resumeStatus').textContent = '';
+  $('resumeResult').innerHTML = alertHTML(
+    '解析完成：识别到 <strong>' + esc(s.highlightCount) + '</strong> 条要点、姓名 <strong>'
+    + esc(s.name || '未识别') + '</strong>、年限 <strong>' + esc(s.years || '未识别') + '</strong>。'
+    + ((s.warnings || []).length ? '<br>' + s.warnings.map((w) => '· ' + esc(w)).join('<br>') : ''),
+    (s.warnings || []).length ? 'warn' : 'ok');
+  loadResume();
+  loadJobs();
+  updateUserChip();
+}
+
+if ($('btnImportResume')) $('btnImportResume').addEventListener('click', async () => {
+  const text = $('resumeText').value;
+  const status = $('resumeStatus');
+  if (!text.trim()) { status.textContent = '请先粘贴简历内容'; return; }
+
+  const btn = $('btnImportResume');
+  btn.disabled = true;
+  const old = btn.textContent;
+  btn.textContent = '解析中…';
+  status.textContent = '';
+
+  try {
+    const r = await api('/api/resume', { method: 'POST', body: { text } });
+    $('resumeText').value = '';
+    handleResumeImported(r);
+  } catch (err) {
+    $('resumeResult').innerHTML = alertHTML('解析失败：' + esc(err.message), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+});
+
+if ($('btnSaveBasic')) $('btnSaveBasic').addEventListener('click', async () => {
+  try {
+    await api('/api/resume', {
+      method: 'PATCH',
+      body: {
+        name: $('pName').value.trim(),
+        years: Number($('pYears').value) || 0,
+        city: $('pCity').value.trim(),
+      },
+    });
+    $('resumeResult').innerHTML = alertHTML('基础信息已保存。回职位列表点「重新评分」让新信息生效。', 'ok');
+    loadResume();
+  } catch (e) {
+    $('resumeResult').innerHTML = alertHTML('保存失败：' + esc(e.message), 'error');
+  }
+});
 
 /* ═══════════════════════════════════════════
    职位列表
@@ -1380,11 +1690,12 @@ function switchView(name) {
   document.querySelectorAll('.nav-links button').forEach((b) => {
     b.setAttribute('aria-selected', String(b.dataset.view === name));
   });
-  ['home', 'optimize', 'prep', 'jobs', 'detail', 'import', 'export', 'settings'].forEach((v) => {
+  ['home', 'resume', 'optimize', 'prep', 'jobs', 'detail', 'import', 'export', 'settings'].forEach((v) => {
     const el = $('view-' + v);
     if (el) el.hidden = v !== name;
   });
   if (name === 'settings') loadSettings();
+  if (name === 'resume') loadResume();
   if (name === 'optimize') { if (!S.optJob) { setStepper('optStepper', 1); if ($('optPickCard')) $('optPickCard').hidden = false; if ($('optResult')) $('optResult').innerHTML = ''; } }
   if (name === 'prep') { if (!S.prepJob) { setStepper('prepStepper', 1); if ($('prepPickCard')) $('prepPickCard').hidden = false; if ($('prepResult')) $('prepResult').innerHTML = ''; } }
   window.scrollTo(0, 0);

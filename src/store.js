@@ -17,6 +17,7 @@ import {
 } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { currentUserId } from './auth.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -26,18 +27,43 @@ const ROOT = resolve(__dirname, '..');
  *   JOB_MATCHER_DATA_DIR=/opt/job-matcher/data-demo
  * 不设则用默认的 <项目根>/data
  */
-export const DATA_DIR = process.env.JOB_MATCHER_DATA_DIR
+const BASE_DATA_DIR = process.env.JOB_MATCHER_DATA_DIR
   ? resolve(process.env.JOB_MATCHER_DATA_DIR)
   : resolve(ROOT, 'data');
 
+/**
+ * 当前数据目录
+ * 已登录 → data/users/<id>/（每个用户一份，互不可见）
+ * 未登录 → data/（兼容单用户/演示模式）
+ */
+export function currentDataDir() {
+  const uid = currentUserId();
+  return uid ? resolve(BASE_DATA_DIR, 'users', uid) : BASE_DATA_DIR;
+}
+
+/** 兼容旧引用（仅表示基础目录，不要用它拼文件路径） */
+export const DATA_DIR = BASE_DATA_DIR;
+
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
+/** 路径按需计算（跟随当前用户） */
+function files() {
+  const dir = currentDataDir();
+  return {
+    dir,
+    jobs: resolve(dir, 'jobs.json'),
+    // 用户导入的简历画像
+    profile: resolve(dir, 'profile.json'),
+    // 未导入时回退到内置模板
+    profileFallback: resolve(BASE_DATA_DIR, 'presets/profile.json'),
+  };
+}
+
+/** 兼容旧代码里的 FILES.jobs 等用法 */
 const FILES = {
-  jobs: resolve(DATA_DIR, 'jobs.json'),
-  // 画像分两份：profile.json 是开源示例，profile.local.json 是私人真实画像（git 忽略）
-  // 存在本地文件时优先用本地，这样开源仓库能直接跑，你自己用时又是真实数据
-  profile: resolve(DATA_DIR, 'presets/profile.local.json'),
-  profileFallback: resolve(DATA_DIR, 'presets/profile.json'),
+  get jobs() { return files().jobs; },
+  get profile() { return files().profile; },
+  get profileFallback() { return files().profileFallback; },
 };
 
 /** 读 JSON，失败返回 fallback */
@@ -89,19 +115,36 @@ export function isValidStatus(s) {
 // ═══════════════════════════════════════════
 
 export function loadJobs() {
-  const raw = readJSON(FILES.jobs, []);
+  const { dir } = files();
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  const raw = readJSON(files().jobs, []);
   return Array.isArray(raw) ? raw : [];
 }
 
 export function saveJobs(jobs) {
-  writeJSON(FILES.jobs, jobs);
+  const { dir, jobs: f } = files();
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  writeJSON(f, jobs);
 }
 
 export function loadProfile() {
-  // 优先私人画像，没有则回退到开源示例
-  const local = readJSON(FILES.profile, null);
-  if (local) return local;
-  return readJSON(FILES.profileFallback, null);
+  const f = files();
+  // 优先用户导入的简历画像，没有则回退到内置模板
+  const mine = readJSON(f.profile, null);
+  if (mine) return mine;
+  return readJSON(f.profileFallback, null);
+}
+
+/** 保存用户画像（导入简历后调用） */
+export function saveProfile(profile) {
+  const { dir, profile: f } = files();
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  writeJSON(f, profile);
+}
+
+/** 是否已导入过简历 */
+export function hasOwnProfile() {
+  return existsSync(files().profile);
 }
 
 /**
@@ -214,10 +257,11 @@ export function computeStats(jobs) {
 /** 备份（改成新的评分逻辑前调用，可回滚） */
 export function backupJobs(jobs) {
   try {
-    if (!existsSync(FILES.jobs)) return null;
+    const f = files();
+    if (!existsSync(f.jobs)) return null;
     const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const dest = resolve(DATA_DIR, `jobs.backup.${stamp}.json`);
-    copyFileSync(FILES.jobs, dest);
+    const dest = resolve(f.dir, `jobs.backup.${stamp}.json`);
+    copyFileSync(f.jobs, dest);
     return dest;
   } catch {
     return null;
