@@ -27,6 +27,7 @@ import {
   isAIEnabled, getAIPublicStatus, generateGreeting, generateAdvice,
   generateBatch, testConnection, listProviders,
 } from './ai.js';
+import { tailorResume, buildStudyPlan } from './tailor.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(__dirname, '..');
@@ -482,6 +483,63 @@ const routes = {
     const job = loadJobs().find((j) => j.id === v.id);
     if (!job) return { error: '岗位不存在', status: 404 };
     return { job, statusOptions: APPLICATION_STATUS };
+  },
+
+  /** 针对该岗位定制简历建议 */
+  'GET /api/jobs/:id/resume': async (q, params) => {
+    const v = validateId(params.id);
+    if (!v.ok) return { error: v.error, status: 400 };
+
+    const job = loadJobs().find((j) => j.id === v.id);
+    if (!job) return { error: '岗位不存在', status: 404 };
+
+    const profile = loadProfile();
+    if (!profile) return { error: '画像文件缺失', status: 500 };
+
+    // 用存储的分数结果重建一个最小 scoreResult（dimensions 已在 job 里）
+    const scoreResult = {
+      total: job.total,
+      grade: job.grade,
+      breakdown: {
+        dimensions: (job.dimensions || []).map((d) => ({
+          id: d.id,
+          name: d.name,
+          weight: d.weight,
+          ratio: d.ratio,
+          hits: d.hits || [],
+        })),
+      },
+    };
+
+    return tailorResume(job, profile, scoreResult);
+  },
+
+  /** 针对该岗位生成复习计划 */
+  'GET /api/jobs/:id/prep': async (q, params) => {
+    const v = validateId(params.id);
+    if (!v.ok) return { error: v.error, status: 400 };
+
+    const job = loadJobs().find((j) => j.id === v.id);
+    if (!job) return { error: '岗位不存在', status: 404 };
+
+    const profile = loadProfile();
+    if (!profile) return { error: '画像文件缺失', status: 500 };
+
+    const scoreResult = {
+      total: job.total,
+      grade: job.grade,
+      breakdown: {
+        dimensions: (job.dimensions || []).map((d) => ({
+          id: d.id,
+          name: d.name,
+          weight: d.weight,
+          ratio: d.ratio,
+          hits: d.hits || [],
+        })),
+      },
+    };
+
+    return buildStudyPlan(job, profile, scoreResult);
   },
 
   'DELETE /api/jobs/:id': async (q, params) => {
