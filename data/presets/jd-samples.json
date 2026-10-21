@@ -1,0 +1,85 @@
+{
+  "$comment": "JD 样例库 —— 用于快速体验与回归测试。每条都标注 source：real（真实抓取，附来源链接）或 synthetic（按真实岗位要求结构构造的示例，非真实招聘）。",
+
+  "samples": [
+    {
+      "id": "sample-nix-vue3",
+      "source": "real",
+      "sourceName": "N-iX 官方招聘页",
+      "sourceUrl": "https://careers.n-ix.com/jobs/4427356101-javascript-senior/",
+      "fetchedAt": "2026-10-21",
+      "note": "真实岗位，完整原文。英文岗位，可用于验证英文 JD 的解析与评分。",
+      "text": "Senior Frontend Engineer (Vue 3 / TypeScript)\nCompany: N-iX\nLocation: Europe (Office/Remote)\nTechnical Level: Senior\n\nWe are a leading European AI company developing large language models and generative platforms for enterprise and government clients. Our products combine high-performance technologies, transparency, accessibility, and data security, fully aligned with European regulatory and ethical standards.\n\nAs a Senior Frontend Engineer, you will take ownership of building scalable, accessible, and high-quality user interfaces, including chat-based AI experiences. You will work closely with product, design, and backend teams to deliver inclusive, reliable, and maintainable frontend systems.\n\nResponsibilities:\n- Design, build, and maintain frontend applications using Vue 3, TypeScript, Pinia, and Vite\n- Own and promote Accessibility (A11y) standards, ensuring inclusive user experiences\n- Develop and maintain chat-based user interfaces integrated with backend APIs\n- Write and maintain End-to-End tests using Playwright\n- Work within a Nx monorepo and contribute to frontend architecture decisions\n- Ensure high code quality through reviews, testing, and best practices\n- Optimize performance, scalability, and long-term maintainability\n- Collaborate closely with designers, backend engineers, and product managers\n\nRequirements:\n- 4+ years of professional frontend development experience (most of which should have been in a production setup with real customers)\n- Strong expertise in Vue.js (Vue 3) and TypeScript\n- Proven experience implementing accessibility (A11y) standards\n- Experience with state management (Pinia or similar)\n- Solid experience with E2E testing (Playwright or equivalent)\n- Strong CSS skills and experience with responsive design\n- Experience working in monorepo environments (Nx or similar)\n- Ability to take ownership and contribute at an architectural level\n\nNice to have:\n- Experience building chat, messaging, or real-time interfaces\n- Familiarity with WebSockets, SSE, or real-time data flows\n- Experience with AI-powered user interfaces\n- Experience with design systems or component libraries\n- Knowledge of CI/CD pipelines and frontend performance optimization\n\nTechnology Stack:\nFrontend: Vue 3, TypeScript, Pinia, Vite\nTesting: Playwright (E2E), unit & integration testing\nArchitecture: Nx monorepo\nUI & Styling: Modern CSS, responsive design, accessibility-first approach (A11y)\nIntegration: REST APIs, real-time interfaces (WebSockets / SSE – nice to have)\nStandards: Accessibility (WCAG), performance optimization, maintainable frontend architecture"
+    },
+
+    {
+      "id": "sample-datasec-lead",
+      "source": "synthetic",
+      "sourceName": "示例构造",
+      "sourceUrl": "",
+      "fetchedAt": "",
+      "note": "按国内数据安全厂商前端负责人岗位的常见要求构造，用于演示高分岗位（架构 + AI + 团队管理）。",
+      "text": "前端负责人\n公司：某数据安全科技公司（示例）\n薪资：45-65K·15薪\n地点：北京\n经验：8-12年\n学历：本科\n\n岗位职责：\n1. 负责数据安全合规产品线的前端团队管理与技术架构设计；\n2. 主导中后台系统架构演进，推进模块化解耦与 Monorepo 工程化改造；\n3. 负责企业级通用组件库与设计系统的建设与推广；\n4. 参与数据可视化能力的架构设计（关系图谱、血缘追踪）；\n5. 探索 AI 能力在数据安全场景的落地（大模型、RAG、智能研判）。\n\n任职要求：\n1. 8 年以上前端开发经验，3 年以上团队管理经验；\n2. 精通 Vue3 + TypeScript，熟悉 Composition API；\n3. 有大型中后台系统架构经验，熟悉微前端（qiankun）、权限体系、动态路由；\n4. 有组件库、设计系统从 0 到 1 的建设经验；\n5. 熟悉前端工程化：构建优化、性能优化、CI/CD、多环境部署；\n6. 有 AI 应用落地经验者优先。"
+    },
+
+    {
+      "id": "sample-ai-startup",
+      "source": "synthetic",
+      "sourceName": "示例构造",
+      "sourceUrl": "",
+      "fetchedAt": "",
+      "note": "参考电鸭社区 AI Agent 类岗位的真实结构构造（远程兼职/项目制常见写法），用于演示 AI 方向岗位。",
+      "text": "AI 应用前端工程师（远程 / 项目制）\n公司：某 AI 创业团队（示例）\n薪资：35-55K\n地点：远程\n经验：5-8年\n\n我们在做面向企业的 AI Agent 产品，需要一位能把大模型能力落到产品界面的前端工程师。\n\n岗位职责：\n1. 负责 AI Agent 产品的前端架构与核心交互开发；\n2. 负责流式输出、多轮对话、上下文管理的体验实现；\n3. 建设 RAG 检索结果的呈现与引用溯源；\n4. 参与 MCP 协议相关的前端集成；\n5. 推动 AI Coding 工具链在团队内落地。\n\n任职要求：\n1. 5 年以上前端经验，精通 Vue3 或 React，TypeScript 熟练；\n2. 有大模型 API 对接经验，理解 Prompt Engineering 与结构化输出约束；\n3. 熟悉流式渲染、SSE、Markdown 增量解析；\n4. 对 Agent、Function Calling、RAG 有实践或深入理解；\n5. 有工程化意识，熟悉组件化与构建优化。"
+    },
+
+    {
+      "id": "sample-mini-program",
+      "source": "synthetic",
+      "sourceName": "示例构造",
+      "sourceUrl": "",
+      "fetchedAt": "",
+      "note": "用于验证「技能高度重合但年限偏低」的场景：小程序维度会拿满分，但年限会触发 overqualified 扣分。",
+      "text": "小程序与多端负责人\n公司：某在线教育公司（示例）\n薪资：35-50K\n地点：北京\n经验：4-6年\n学历：本科\n\n岗位职责：\n1. 负责公司小程序矩阵的技术负责人角色；\n2. 主导 Taro2 → Taro3 / uni-app 的技术选型与迁移；\n3. 负责小程序底层框架、多环境构建、公共组件库建设；\n4. 负责企业微信侧工具建设（客服工作台、运营后台）；\n5. 带领 2-3 人小组完成交付。\n\n任职要求：\n1. 4 年以上前端经验，3 年以上小程序开发经验；\n2. 精通 Taro 或 uni-app，有跨端框架调优经验；\n3. 熟悉微信生态：登录、支付、订阅消息、JSSDK；\n4. 有企业微信、公众号、H5 多端适配经验；\n5. 有框架搭建、组件库沉淀经验者优先。"
+    },
+
+    {
+      "id": "sample-fintech",
+      "source": "synthetic",
+      "sourceName": "示例构造",
+      "sourceUrl": "",
+      "fetchedAt": "",
+      "note": "典型金融中后台高级前端岗位，用于验证 Vue + 中后台复杂度的匹配。",
+      "text": "高级前端工程师（金融科技）\n公司：某金融科技公司（示例）\n薪资：38-55K·15薪\n地点：北京\n经验：5-10年\n学历：本科\n\n岗位职责：\n1. 负责核心业务系统（信贷审批、风控管理）的前端架构设计与开发；\n2. 使用 Vue3 + TypeScript 构建中后台系统，负责复杂表单、权限、审批流；\n3. 参与微前端架构落地，负责子系统拆分与接入；\n4. 负责前端性能优化与构建优化，提升交付效率；\n5. 参与 AI 辅助功能接入（智能填单、合同信息提取）。\n\n任职要求：\n1. 5 年以上前端开发经验，精通 Vue 技术栈；\n2. 熟悉中后台常见复杂度：动态表单、权限控制、数据可视化；\n3. 有微前端（qiankun / Module Federation）实践经验；\n4. 熟悉 Vite / Webpack 构建配置与优化；\n5. 有金融行业背景、熟悉数据安全合规者优先。"
+    },
+
+    {
+      "id": "sample-bff-fullstack",
+      "source": "synthetic",
+      "sourceName": "示例构造",
+      "sourceUrl": "",
+      "fetchedAt": "",
+      "note": "偏全栈的岗位，用于验证后端维度的加权与短板识别。",
+      "text": "前端工程师（全栈方向）\n公司：某 SaaS 服务商（示例）\n薪资：30-45K\n地点：上海\n经验：4-8年\n\n岗位职责：\n1. 负责 SaaS 产品的前端开发与 BFF 层建设；\n2. 用 Node.js 编写 BFF 接口，聚合后端服务；\n3. 参与数据库表设计与查询优化；\n4. 负责前端构建与部署流程（Docker、CI/CD）。\n\n任职要求：\n1. 4 年以上前端经验，熟悉 Vue3 + TypeScript；\n2. 有 Node.js 服务端开发经验（Express / NestJS）；\n3. 熟悉 MySQL 或 PostgreSQL，能写基本 SQL；\n4. 了解 Redis 缓存与任务队列；\n5. 熟悉 Docker 与 Nginx 部署；\n6. 有 Monorepo 经验者优先。"
+    },
+
+    {
+      "id": "sample-react-only",
+      "source": "synthetic",
+      "sourceName": "示例构造",
+      "sourceUrl": "",
+      "fetchedAt": "",
+      "note": "用于验证「方向不符」的降分效果：要求 React 深度 + Flutter/RN，应触发红线并判低分。",
+      "text": "资深 React 前端工程师\n公司：某互联网大厂（示例）\n薪资：45-70K·16薪\n地点：北京\n经验：5年以上\n学历：本科\n\n岗位职责：\n1. 负责核心 ToC 产品（日活百万级）的前端开发；\n2. 使用 React 18 + TypeScript 构建高性能交互页面；\n3. 负责首屏性能与交互流畅度的极致优化；\n4. 参与 SSR 架构（Next.js）落地。\n\n任职要求：\n1. 5 年以上前端经验，精通 React 及生态（Redux/Zustand）；\n2. 深刻理解 React 渲染机制、Hooks 原理、并发特性；\n3. 有大型 ToC 产品高并发、高性能优化经验；\n4. 熟悉 SSR、Next.js、同构渲染；\n5. 有 Flutter 或 React Native 跨端经验者优先。"
+    },
+
+    {
+      "id": "sample-outsourcing",
+      "source": "synthetic",
+      "sourceName": "示例构造",
+      "sourceUrl": "",
+      "fetchedAt": "",
+      "note": "用于验证红线识别：外包驻场 + 年限偏低，应被显著降分。",
+      "text": "前端开发工程师（外包驻场）\n公司：某人力服务公司（示例）\n薪资：15-22K\n地点：北京\n经验：1-3年\n学历：不限\n\n1. 使用 Vue2 开发银行内部管理系统页面；\n2. 按甲方需求完成页面搭建与数据对接；\n3. 完成项目经理安排的其他工作。"
+    }
+  ]
+}

@@ -7,12 +7,12 @@
 
 /** 常见的 JD 字段标签 */
 const LABELS = {
-  company: ['公司', '公司名称', '企业名称', '招聘企业', '所属公司'],
-  position: ['职位', '岗位', '职位名称', '岗位名称', '招聘职位'],
-  salary: ['薪资', '月薪', '年薪', '工资', '薪资范围', '待遇'],
-  city: ['城市', '工作地点', '地点', '所在城市', '地区', '工作地址'],
-  experience: ['经验', '工作经验', '年限', '经验要求'],
-  education: ['学历', '学历要求', '最低学历'],
+  company: ['公司', '公司名称', '企业名称', '招聘企业', '所属公司', 'Company', 'company'],
+  position: ['职位', '岗位', '职位名称', '岗位名称', '招聘职位', 'Position', 'Job Title', 'Role'],
+  salary: ['薪资', '月薪', '年薪', '工资', '薪资范围', '待遇', 'Salary', 'Compensation'],
+  city: ['城市', '工作地点', '地点', '所在城市', '地区', '工作地址', 'Location', 'City'],
+  experience: ['经验', '工作经验', '年限', '经验要求', 'Experience', 'Years'],
+  education: ['学历', '学历要求', '最低学历', 'Education', 'Degree'],
   link: ['链接', '网址', '职位链接', 'URL', 'url'],
 };
 
@@ -87,8 +87,10 @@ export function parseJD(raw, fallback = {}) {
   let position = grabLabeled(text, LABELS.position);
   if (!position) {
     const firstLine = text.split('\n').map((l) => l.trim()).find(Boolean) || '';
-    // 第一行如果不太长且不含句号，大概率是职位名
-    if (firstLine.length <= 30 && !/[。；;]/.test(firstLine)) position = firstLine;
+    // 第一行如果不太长、不含句末标点，大概率是职位名（英文职位名常带括号，放宽到 60 字）
+    if (firstLine.length <= 60 && !/[。；;]/.test(firstLine) && !/^(公司|Company|薪资|Salary|地点|Location|经验|Experience)[:：]/.test(firstLine)) {
+      position = firstLine;
+    }
   }
 
   const company = fallback.company || grabLabeled(text, LABELS.company);

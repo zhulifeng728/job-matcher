@@ -437,6 +437,72 @@ const routes = {
     };
   },
 
+  // ─────────── 样例库 ───────────
+
+  /** 列出样例 JD（不含全文，避免响应过大） */
+  'GET /api/samples': async () => {
+    const file = resolve(__dirname, '../data/presets/jd-samples.json');
+    if (!existsSync(file)) return { samples: [] };
+    try {
+      const data = JSON.parse(readFileSync(file, 'utf-8'));
+      return {
+        samples: (data.samples || []).map((s) => ({
+          id: s.id,
+          source: s.source,
+          sourceName: s.sourceName,
+          sourceUrl: s.sourceUrl || '',
+          note: s.note || '',
+          // 预览：取前 120 字
+          preview: String(s.text || '').replace(/\s+/g, ' ').slice(0, 120),
+          length: String(s.text || '').length,
+        })),
+      };
+    } catch (e) {
+      return { error: '样例库读取失败：' + e.message, status: 500 };
+    }
+  },
+
+  /** 导入指定样例（可多选） */
+  'POST /api/samples/import': async (q, p, body) => {
+    const profile = loadProfile();
+    if (!profile) return { error: '画像文件缺失', status: 500 };
+
+    const ids = Array.isArray(body.ids) ? body.ids.slice(0, 20) : [];
+    if (!ids.length) return { error: '未选择样例', status: 400 };
+
+    const file = resolve(__dirname, '../data/presets/jd-samples.json');
+    if (!existsSync(file)) return { error: '样例库不存在', status: 500 };
+
+    let data;
+    try { data = JSON.parse(readFileSync(file, 'utf-8')); }
+    catch (e) { return { error: '样例库解析失败', status: 500 }; }
+
+    const picked = (data.samples || []).filter((s) => ids.includes(s.id));
+    if (!picked.length) return { error: '未找到匹配的样例', status: 400 };
+
+    const scored = picked.map((s) => {
+      const parsed = parseJD(s.text);
+      const sc = scoreJob(parsed, profile);
+      return sliceForStorage({
+        ...sc,
+        // 样例来源写进备注，便于区分真实与示例数据
+        company: sc.company,
+      });
+    });
+
+    const { list, added, updated } = upsertJobs(scored, loadJobs());
+    saveJobs(list);
+
+    return {
+      added: added.length,
+      updated: updated.length,
+      jobs: [...added, ...updated].map((j) => ({
+        id: j.id, company: j.company, position: j.position,
+        total: j.total, grade: j.grade,
+      })),
+    };
+  },
+
   // ─────────── 查询 ───────────
 
   'GET /api/jobs': async (query) => {

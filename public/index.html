@@ -551,7 +551,22 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         <h2>导入 JD</h2>
         <p>从 BOSS 直聘、智联招聘、猎聘或公司官网复制岗位描述，粘贴进来即可分析。</p>
       </div>
+      <div class="card" style="margin-bottom:20px">
+        <h3 class="card-title">样例库</h3>
+        <p class="card-desc">
+          没有现成的 JD？勾几个样例直接导入，几秒钟就能看到完整效果。
+          <strong>标注「真实」的来自公开的官方招聘页（附来源链接）</strong>，其余是按真实岗位要求结构构造的示例，非真实招聘。
+        </p>
+        <div id="sampleList" class="provider-list"></div>
+        <div class="toolbar" style="margin-top:20px">
+          <button class="btn btn-primary" id="btnImportSamples">导入选中样例</button>
+          <button class="btn btn-ghost" id="btnSelectAllSamples">全选</button>
+          <span id="sampleStatus" style="font-size:13px;color:var(--ink-3)"></span>
+        </div>
+      </div>
+
       <div class="card">
+        <h3 class="card-title">手动粘贴</h3>
         <div class="field-row">
           <div class="field">
             <label class="field-label" for="impCompany">公司名（可选）</label>
@@ -1163,6 +1178,71 @@ function renderDetail(job) {
 }
 
 /* ═══════════════════════════════════════════
+   样例库
+   ═══════════════════════════════════════════ */
+
+async function loadSamples() {
+  const box = $('sampleList');
+  if (!box) return;
+  try {
+    const d = await api('/api/samples');
+    const list = d.samples || [];
+    if (!list.length) { box.innerHTML = '<div style="color:var(--ink-3);font-size:14px">样例库为空。</div>'; return; }
+
+    box.innerHTML = list.map((s) => {
+      const isReal = s.source === 'real';
+      return '<label class="provider" style="display:flex;gap:12px;align-items:flex-start;cursor:pointer">'
+        + '<input type="checkbox" class="sample-check" value="' + esc(s.id) + '" style="margin-top:4px;width:auto;flex:none">'
+        + '<div style="flex:1;min-width:0">'
+        + '<div class="provider-head">'
+        + '<span class="provider-name">' + esc(s.preview.slice(0, 34)) + '</span>'
+        + '<span class="tag ' + (isReal ? 'tag-brand' : '') + '">' + (isReal ? '真实' : '构造') + '</span>'
+        + (s.sourceUrl ? '<a href="' + esc(s.sourceUrl) + '" target="_blank" rel="noopener" style="font-size:12px">来源 ↗</a>' : '')
+        + '</div>'
+        + '<div class="provider-note">' + esc(s.note) + '</div>'
+        + '</div></label>';
+    }).join('');
+  } catch (e) {
+    box.innerHTML = alertHTML('样例库加载失败：' + esc(e.message), 'error');
+  }
+}
+
+if ($('btnSelectAllSamples')) $('btnSelectAllSamples').addEventListener('click', () => {
+  const boxes = document.querySelectorAll('.sample-check');
+  const allChecked = [...boxes].every((b) => b.checked);
+  boxes.forEach((b) => { b.checked = !allChecked; });
+});
+
+if ($('btnImportSamples')) $('btnImportSamples').addEventListener('click', async () => {
+  const ids = [...document.querySelectorAll('.sample-check:checked')].map((b) => b.value);
+  const status = $('sampleStatus');
+  if (!ids.length) { status.textContent = '请先勾选样例'; return; }
+
+  const btn = $('btnImportSamples');
+  btn.disabled = true;
+  const old = btn.textContent;
+  btn.textContent = '导入中';
+  status.textContent = '';
+
+  try {
+    const r = await api('/api/samples/import', { method: 'POST', body: { ids } });
+    S.resumeCache = {}; S.prepCache = {};
+    await loadJobs();
+    status.textContent = '导入完成：新增 ' + r.added + ' 个';
+    switchView('jobs');
+    const list = (r.jobs || []).slice(0, 10)
+      .map((j) => '<li>' + esc(j.company) + ' · ' + esc(j.position) + '（' + esc(j.total) + ' 分 / ' + esc(j.grade) + '）</li>').join('');
+    $('jobList').insertAdjacentHTML('afterbegin', alertHTML(
+      '从样例库导入：新增 <strong>' + r.added + '</strong> 个，更新 <strong>' + r.updated + '</strong> 个。'
+      + (list ? '<ul style="margin:10px 0 0;padding-left:20px">' + list + '</ul>' : ''), 'ok'));
+  } catch (e) {
+    status.textContent = '导入失败：' + e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = old;
+  }
+});
+
+/* ═══════════════════════════════════════════
    导入
    ═══════════════════════════════════════════ */
 
@@ -1405,6 +1485,7 @@ function initBookmarklet() {
 
 boot();
 initBookmarklet();
+loadSamples();
 </script>
 </body>
 </html>
