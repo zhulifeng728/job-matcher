@@ -222,6 +222,27 @@ textarea { min-height:200px; line-height:1.7; resize:vertical; }
 .sched-focus { font-size:15px; font-weight:600; margin-bottom:7px; }
 .sched-items { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:7px; }
 .sched-tip { font-size:13px; color:var(--ink-3); line-height:1.7; }
+/* 深度文档（Markdown 渲染结果） */
+.md-doc { font-size:14.5px; line-height:1.8; color:var(--ink); }
+.md-doc .md-h1 { font-size:26px; font-weight:700; margin:8px 0 16px; letter-spacing:-.02em; }
+.md-doc .md-h2 { font-size:20px; font-weight:700; margin:34px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+.md-doc .md-h3 { font-size:16.5px; font-weight:600; margin:26px 0 10px; color:var(--brand-deep); }
+.md-doc .md-h4 { font-size:14.5px; font-weight:600; margin:18px 0 8px; color:var(--ink-2); }
+.md-doc .md-p { margin:0 0 10px; }
+.md-doc .md-quote { margin:0 0 16px; padding:12px 16px; background:var(--brand-soft); border-left:3px solid var(--brand); border-radius:0 var(--r-ctl) var(--r-ctl) 0; font-size:13.5px; color:var(--brand-deep); }
+.md-doc .md-list { margin:0 0 12px; padding-left:22px; }
+.md-doc .md-list li { margin-bottom:5px; }
+.md-doc .md-code { background:#0f172a; color:#dbeafe; padding:14px 16px; border-radius:var(--r-ctl); overflow:auto; margin:0 0 14px; font-family:var(--mono); font-size:12px; line-height:1.7; }
+.md-doc .md-code code { background:none; border:none; color:inherit; padding:0; }
+.md-doc .md-table-wrap { overflow-x:auto; margin:0 0 16px; }
+.md-doc .md-table { border-collapse:collapse; width:100%; font-size:13px; }
+.md-doc .md-table th, .md-doc .md-table td { border:1px solid var(--line); padding:8px 11px; text-align:left; vertical-align:top; }
+.md-doc .md-table th { background:var(--bg-soft-2); font-weight:600; white-space:nowrap; }
+.md-doc strong { font-weight:600; color:var(--ink); }
+.md-doc code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); padding:1px 5px; border-radius:4px; color:var(--brand-deep); }
+.md-doc hr { border:none; border-top:1px solid var(--line); margin:28px 0; }
+.doc-toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:20px; }
+
 .tabs { display:flex; gap:6px; border-bottom:1px solid var(--line); margin-bottom:24px; }
 .tabs button { padding:12px 20px; border:none; background:transparent; font-size:15px; font-weight:500; color:var(--ink-3); cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-1px; transition:.15s; }
 .tabs button:hover { color:var(--brand); }
@@ -569,6 +590,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         <div class="toolbar" style="margin-top:20px"><button class="btn" onclick="switchView('import')">导入新岗位</button></div>
       </div>
       <div id="prepResult"></div>
+      <div id="prepDocBox"></div>
     </div>
   </section>
 
@@ -781,7 +803,7 @@ const S = {
   exportText: '', exportFormat: 'md',
   optJob: null, prepJob: null,
   resumeCache: {}, prepCache: {},
-  user: null, hasResume: false,
+  user: null, hasResume: false, prepDocText: '',
 };
 
 const $ = (id) => document.getElementById(id);
@@ -1376,6 +1398,16 @@ async function openPrep(id) {
       + '<button class="btn btn-sm" onclick="switchView(\'optimize\');openOptimize(\'' + esc(id) + '\')">去看简历优化</button>'
       + '</div></div>'
       + renderPrepCards(d);
+
+    // 顺手生成深度文档（知识库版或 AI 版）
+    const docBox = $('prepDocBox');
+    if (docBox) {
+      docBox.innerHTML = '<div class="card" style="margin-top:20px">'
+        + '<h3 class="card-title">深度复习文档</h3>'
+        + '<p class="card-desc" style="margin-bottom:14px">按 9 段固定结构生成，含核心概念、面试问题、追问、伪代码、知识图谱、项目深挖与复习计划。</p>'
+        + '<button class="btn btn-primary" id="btnGenDoc">生成深度文档</button></div>';
+      $('btnGenDoc').onclick = () => loadPrepDoc(id);
+    }
   } catch (e) {
     box.innerHTML = alertHTML('生成失败：' + esc(e.message), 'error');
   }
@@ -1386,6 +1418,8 @@ function resetPrep() {
   setStepper('prepStepper', 1);
   if ($('prepPickCard')) $('prepPickCard').hidden = false;
   if ($('prepResult')) $('prepResult').innerHTML = '';
+  if ($('prepDocBox')) $('prepDocBox').innerHTML = '';
+  S.prepDocText = '';
 }
 
 function renderPrepCards(d) {
@@ -1428,6 +1462,57 @@ function renderPrepCards(d) {
       + '<p class="card-desc">P0 是 JD 明确提到的、必须能讲清楚的；P1 是相关维度的高频考点。</p>' + topics + '</div>' : '')
     + (talks ? '<div class="card"><h3 class="card-title">项目该怎么讲</h3>'
       + '<p class="card-desc">挑出与这个岗位匹配的经历，按 STAR 结构准备。</p>' + talks + '</div>' : '');
+}
+
+/* ═══════════════════════════════════════════
+   深度复习文档
+   ═══════════════════════════════════════════ */
+
+async function loadPrepDoc(jobId) {
+  const box = $('prepDocBox');
+  if (!box) return;
+
+  box.innerHTML = '<div class="card" style="margin-top:20px">'
+    + '<div class="skeleton sk-line" style="width:36%;height:16px"></div>'
+    + '<div class="skeleton sk-line" style="width:100%;margin-top:16px"></div>'
+    + '<div class="skeleton sk-line" style="width:88%"></div>'
+    + '<div class="skeleton sk-line" style="width:70%"></div></div>';
+
+  try {
+    const d = await api('/api/jobs/' + encodeURIComponent(jobId) + '/prep-doc');
+    const badge = d.source === 'ai'
+      ? '<span class="tag tag-brand">AI 生成</span>'
+      : d.source === 'rules-fallback'
+        ? '<span class="tag tag-warn">AI 失败·已降级</span>'
+        : '<span class="tag">知识库版</span>';
+
+    box.innerHTML = '<div class="card" style="margin-top:20px">'
+      + '<div class="doc-toolbar">'
+      + '<h3 class="card-title" style="margin:0;flex:1">深度复习文档</h3>'
+      + badge
+      + '<span class="tag">' + d.chars.toLocaleString() + ' 字</span>'
+      + '<button class="btn btn-sm" onclick="copyPrepDoc()">复制全文</button>'
+      + '</div>'
+      + (d.note ? '<div class="alert alert-info" style="margin-bottom:16px">' + esc(d.note) + '</div>' : '')
+      + (d.complete === false ? '<div class="alert alert-warn" style="margin-bottom:16px">文档可能未完整，建议再生成一次。</div>' : '')
+      + '<div class="md-doc" id="prepDocContent">' + d.html + '</div>'
+      + '</div>';
+
+    S.prepDocText = d.content;
+  } catch (e) {
+    box.innerHTML = '<div class="card" style="margin-top:20px">'
+      + alertHTML('深度文档生成失败：' + esc(e.message), 'error') + '</div>';
+  }
+}
+
+async function copyPrepDoc() {
+  if (!S.prepDocText) return;
+  try {
+    await navigator.clipboard.writeText(S.prepDocText);
+    alert('已复制 ' + S.prepDocText.length + ' 字');
+  } catch {
+    alert('复制失败，请手动选择文本');
+  }
 }
 
 /* ═══════════════════════════════════════════

@@ -211,7 +211,7 @@ export function getAIPublicStatus() {
  * 调 OpenAI 兼容接口
  * 统一处理：超时、错误分类、重试
  */
-async function chat(messages, { temperature = 0.4, maxTokens = 900, retries = 1 } = {}) {
+export async function chat(messages, { temperature = 0.4, maxTokens = 900, retries = 1 } = {}) {
   const cfg = resolveAIConfig();
   if (!cfg.enabled) throw new Error(cfg.reason || 'AI 未配置');
 

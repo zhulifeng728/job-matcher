@@ -29,6 +29,8 @@ import {
   generateBatch, testConnection, listProviders,
 } from './ai.js';
 import { tailorResume, buildStudyPlan } from './tailor.js';
+import { generatePrepDoc, hasAI } from './deep-prep.js';
+import { renderMarkdown } from './markdown.js';
 import {
   registerUser, verifyUser, publicUser, userFromRequest,
   issueSession, sessionCookie, clearSessionCookie, userContext,
@@ -561,6 +563,7 @@ const routes = {
       profileMeta: profile?.meta || null,
       jobsCount: jobs.length,
       ai: getAIPublicStatus(),
+      aiReady: hasAI(),
       quota: quotaStatus(),
       requiresLogin: true,
     };
@@ -793,6 +796,43 @@ const routes = {
     };
 
     return buildStudyPlan(job, profile, scoreResult);
+  },
+
+  /** 深度复习文档（配了 AI 走 AI，没配走结构化知识库） */
+  'GET /api/jobs/:id/prep-doc': async (q, params) => {
+    const v = validateId(params.id);
+    if (!v.ok) return { error: v.error, status: 400 };
+
+    const job = loadJobs().find((j) => j.id === v.id);
+    if (!job) return { error: '岗位不存在', status: 404 };
+
+    const profile = loadProfile();
+    if (!profile) return { error: '还没有导入简历', status: 400 };
+
+    const scoreResult = {
+      total: job.total,
+      grade: job.grade,
+      breakdown: {
+        dimensions: (job.dimensions || []).map((d) => ({
+          id: d.id, name: d.name, weight: d.weight, ratio: d.ratio, hits: d.hits || [],
+        })),
+      },
+    };
+
+    const plan = buildStudyPlan(job, profile, scoreResult);
+    const doc = await generatePrepDoc(job, profile, plan);
+
+    return {
+      jobTitle: job.position,
+      company: job.company,
+      source: doc.source,
+      note: doc.note || '',
+      rounds: doc.rounds || 1,
+      complete: doc.complete !== false,
+      chars: (doc.content || '').length,
+      // 服务端渲成 HTML，前端直接插入；文本已全量转义
+      html: renderMarkdown(doc.content),
+    };
   },
 
   'DELETE /api/jobs/:id': async (q, params) => {
