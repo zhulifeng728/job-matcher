@@ -9,6 +9,9 @@ data/*.json.tmp.*
 data/presets/profile.local.json
 !data/presets/profile.json
 
+# ── 部署记录（含服务器 IP 与访问口令，绝不提交）──
+docs/DEPLOYMENT-RECORD.md
+
 # ── 环境与密钥 ──
 .env
 .env.*

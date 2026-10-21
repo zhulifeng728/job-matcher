@@ -41,8 +41,10 @@ export const PROVIDERS = {
   nvidia: {
     label: 'NVIDIA NIM（有免费额度）',
     baseUrl: 'https://integrate.api.nvidia.com/v1',
+    // 注意：NVIDIA 会下线旧模型（实测 meta/llama-3.3-70b-instruct 已 EOL 返回 410）
+    // 首次使用请先 GET /v1/models 查当前可用模型，再用 JOB_MATCHER_MODEL 指定
     defaultModel: 'meta/llama-3.3-70b-instruct',
-    freeNote: 'build.nvidia.com 注册后每个模型有免费调用额度',
+    freeNote: '需先在 build.nvidia.com 对应模型页启用；模型会 EOL 下线，请用 GET /v1/models 自查',
     envKeys: ['NVIDIA_API_KEY', 'NVIDIA_NIM_API_KEY'],
   },
   deepseek: {
@@ -282,7 +284,11 @@ function explainHttpError(status, detail, cfg) {
     401: 'API Key 无效或已过期，检查环境变量',
     402: '账户余额不足，或者免费额度已用完',
     403: '没有权限访问该模型（免费模型有时需要先在页面同意条款）',
-    404: `模型 "${cfg.model}" 不存在，检查模型名是否正确`,
+    404: `模型 "${cfg.model}" 不存在或未为你的账号开通。\n`
+       + 'NVIDIA 的部分模型需先在 build.nvidia.com 对应模型页启用；'
+       + '其它平台请核对模型名拼写',
+    410: `模型 "${cfg.model}" 已下线（EOL），必须换一个可用模型。\n`
+       + '请用 GET /v1/models 列出当前可用模型，或参考 docs/FREE-MODELS.md 的自查步骤',
     429: '请求太频繁被限流，稍后重试或降低并发',
     500: '模型服务端错误，重试或换模型',
     502: '网关错误，模型服务可能暂时不可用',

@@ -76,7 +76,7 @@ NVIDIA_API_KEY=nvapi-你的key \
 node src/server.js
 ```
 
-默认模型是 `meta/llama-3.3-70b-instruct`，也可以换成你在页面上看到的其它模型：
+默认模型是 `meta/llama-3.3-70b-instruct`（**该模型已于 2026-08 下线**，实测返回 410，请先用上方自查命令换一个可用模型）。也可以直接指定：
 
 ```bash
 JOB_MATCHER_PROVIDER=nvidia \
@@ -176,6 +176,59 @@ node src/server.js
 - 公司内部的模型网关
 - vLLM / SGLang / TGI 自建推理服务
 - 其它聚合平台（接口兼容即可）
+
+---
+
+## ⚠️ 先确认你的 Key 能用哪些模型（重要）
+
+**这是实测踩过的坑**：Key 有效 ≠ 模型可用。我们在 2026 年实测发现：
+
+| 现象 | HTTP 码 | 含义 |
+|---|---|---|
+| 接口能返回模型列表，但调对话就失败 | `404 Function ... not found for account` | **该模型没有为你的账号开通**，需要先去控制台启用 |
+| 模型明确报下线 | `410 Gone` + `has reached its end of life` | **模型已 EOL 下线**，必须换新模型 |
+| 一切正常 | `200` | 可用 |
+
+### 自查命令（推荐先跑这一步）
+
+拿到 Key 后，**先列出你的账号实际可用的模型**：
+
+```bash
+# NVIDIA
+curl -s https://integrate.api.nvidia.com/v1/models   -H "Authorization: Bearer $NVIDIA_API_KEY" | python3 -m json.tool | head -40
+
+# OpenRouter
+curl -s https://openrouter.ai/api/v1/models | python3 -m json.tool | head -40
+```
+
+然后**逐个试**（比看文档准）：
+
+```bash
+curl -s -w '\nHTTP %{http_code}\n' \
+  https://integrate.api.nvidia.com/v1/chat/completions \
+  -H "Authorization: Bearer $NVIDIA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"你的模型名","messages":[{"role":"user","content":"hi"}],"max_tokens":10}'
+```
+
+返回 `choices` 字段就是可用；返回 `title/detail` 就是不可用，看 `detail` 里的原因。
+
+### 关于模型 EOL
+
+各家会持续下线旧模型。我们实测时 `meta/llama-3.3-70b-instruct`、
+`meta/llama-3.1-8b-instruct` 都已 EOL（返回 `410 Gone`）。
+
+**结论**：不要把某个具体模型名当成永远有效。**每次部署前跑一遍上面的自查**，
+或者直接在 OpenRouter 的免费模型列表页挑当前可用的。
+
+### NVIDIA 的特殊要求
+
+NVIDIA 的部分模型需要**在模型页面手动点同意/启用**，否则会返回 `404`：
+
+1. 打开 https://build.nvidia.com/
+2. 进入你想用的模型页面（如 https://build.nvidia.com/meta/llama-3.3-70b-instruct）
+3. 页面右上角点 **Get API Key** 或 **View Code** 区块，确认账号已开通该模型
+4. 如果显示需要同意条款，先点 Agree
 
 ---
 
