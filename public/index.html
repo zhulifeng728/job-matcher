@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="color-scheme" content="light">
 <meta name="description" content="基于真实 JD 的 AI 求职工具：岗位匹配分析、简历针对性优化、面试技术复习文档">
-<title>AI 求职助手 · 简历优化与技术复习</title>
+<title>职镜 · 照着 JD 改简历，不猜 HR 想什么</title>
 <link rel="stylesheet" href="vendor/oat/01-theme.css">
 <link rel="stylesheet" href="vendor/oat/toast.css">
 <link rel="stylesheet" href="vendor/oat/dialog.css">
@@ -791,7 +791,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
   <header class="lp-nav">
     <div class="lp-nav-inner">
       <a class="lp-logo" href="#" onclick="showLanding();return false">
-        <span class="logo-mark">AI</span><span>AI 求职助手</span>
+        <span class="logo-mark">职</span><span>职镜</span>
       </a>
       <nav class="lp-links">
         <a href="#feature">功能</a>
@@ -1013,7 +1013,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
 
   <footer class="lp-footer">
     <div class="lp-footer-inner">
-      <span>AI 求职助手 · 开源项目</span>
+      <span>职镜 · 开源项目</span>
       <span class="lp-footer-sep">·</span>
       <a href="https://github.com/zhulifeng728/job-matcher" target="_blank" rel="noopener">GitHub</a>
       <span class="lp-footer-sep">·</span>
@@ -1027,7 +1027,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
 <div id="loginPage" class="login-wrap" hidden>
   <div class="login-card">
     <div class="login-logo">AI</div>
-    <h1 class="login-title">AI 求职助手</h1>
+    <h1 class="login-title">职镜</h1>
     <p class="login-desc" id="loginDesc">先导入你的简历，再按岗位改简历、备面试。</p>
 
     <div class="auth-tabs">
@@ -1059,7 +1059,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
   <header class="nav-bar">
     <div class="nav-inner">
       <a class="logo" href="#" onclick="switchView('home');return false">
-        <span class="logo-mark">AI</span><span>AI 求职助手</span>
+        <span class="logo-mark">职</span><span>职镜</span>
       </a>
       <nav class="nav-links" role="tablist" aria-label="主导航">
         <button role="tab" data-view="home" aria-selected="true">首页</button>
@@ -1081,7 +1081,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
   <section class="view" id="view-home">
     <div class="hero">
       <div class="hero-inner">
-        <h1>AI 求职助手</h1>
+        <h1>职镜</h1>
         <p>基于真实 JD，帮你改简历、备面试、选对岗位</p>
         <div class="hero-actions">
           <button class="btn-hero btn-hero-primary" onclick="switchView('jobs')">开始匹配岗位</button>
@@ -1496,7 +1496,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
           background:linear-gradient(135deg,#5B8DEF,#3669EC);display:grid;place-items:center;
           color:#fff;font-weight:700;font-size:19px;box-shadow:0 8px 20px rgba(54,105,236,.28)">AI</div>
         <div style="flex:1;min-width:200px">
-          <div style="font-size:15px;font-weight:600;margin-bottom:3px">AI 求职助手 · Chrome 扩展</div>
+          <div style="font-size:15px;font-weight:600;margin-bottom:3px">职镜 · Chrome 扩展</div>
           <div style="font-size:12.5px;color:var(--ink-3)">v1.1.0 · 57 KB · 在招聘网站右下角一键算匹配度</div>
         </div>
         <a class="btn btn-primary" href="download/job-matcher-extension.zip" download>下载扩展</a>
@@ -1599,7 +1599,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
             <span class="ci-ic">1</span>
             <div>
               <div class="ci-t">扩展列表里能看到它，且开关是开的</div>
-              <div class="ci-d">在 <code>chrome://extensions</code> 里找「AI 求职助手 · 岗位匹配」</div>
+              <div class="ci-d">在 <code>chrome://extensions</code> 里找「职镜 · 岗位匹配」</div>
             </div>
           </div>
           <div class="check-item">
@@ -1731,7 +1731,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
 
   <footer class="footer">
     <div class="footer-inner">
-      <span>AI 求职助手 · 基于真实 JD 的简历优化与面试复习</span>
+      <span>职镜 · 基于真实 JD 的简历优化与面试复习</span>
       <div class="spacer"></div>
       <div class="footer-links">
         <a href="/demo/">演示数据</a>
@@ -4048,7 +4048,7 @@ function buildBookmarklet() {
     'if(t.length>20000)t=t.slice(0,20000)+"\\n\\n[内容超长已截断]";',
     'var out=(document.title||"")+"\\n\\n"+t;',
     'var done=function(){var d=document.createElement("div");',
-    'd.textContent="已复制 "+out.length+" 字，去 AI 求职助手粘贴即可";',
+    'd.textContent="已复制 "+out.length+" 字，去职镜粘贴即可";',
     'd.style.cssText="position:fixed;z-index:2147483647;left:50%;top:20px;transform:translateX(-50%);"',
     '+"background:#1f2937;color:#fff;padding:11px 18px;border-radius:8px;font:13px/1.5 -apple-system,PingFang SC,sans-serif;"',
     '+"box-shadow:0 8px 24px rgba(0,0,0,.35);max-width:90vw";',

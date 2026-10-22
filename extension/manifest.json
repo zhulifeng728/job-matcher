@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "AI 求职助手 · 岗位匹配",
+  "name": "职镜 · 岗位匹配",
   "version": "1.1.0",
   "description": "在招聘网站看岗位时，一键按你的简历算匹配度、判断该不该投、告诉你缺什么要补多久。",
   "permissions": [
@@ -48,7 +48,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "AI 求职助手",
+    "default_title": "职镜",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

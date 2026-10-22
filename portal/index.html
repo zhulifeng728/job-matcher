@@ -3,219 +3,147 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>服务器项目门户 · 150.158.49.37</title>
-<meta name="description" content="这台服务器上运行的项目入口">
+<title>职镜 · 照着 JD 改简历，不猜 HR 想什么</title>
+<meta name="description" content="职镜 —— 粘贴一份岗位描述，30 秒得到匹配度、要改哪些经历、缺什么技能要补多久。">
 <style>
   :root {
-    --bg: #0B1220; --bg-2: #111B2E; --card: #131F35; --card-h: #17253F;
-    --line: #1F2E4A; --ink: #E6EDF7; --ink-2: #A8B8D0; --ink-3: #6F83A0;
-    --brand: #5B8DEF; --brand-2: #3669EC;
-    --ok: #34D399; --warn: #FBBF24; --off: #64748B;
+    --brand: #3669EC; --brand-2: #5B8DEF; --ink: #0F172A; --ink-2: #475569;
+    --ink-3: #64748B; --line: #E2E8F0; --line-2: #CBD5E1;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --grad: linear-gradient(135deg, #5B8DEF, #3669EC);
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
-    margin: 0; background: radial-gradient(1200px 600px at 50% -10%, #16233C 0%, var(--bg) 60%);
-    color: var(--ink); min-height: 100vh;
-    font: 15px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    margin: 0; color: var(--ink); background: #fff;
+    font: 15px/1.65 -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
-  }
-  .wrap { max-width: 1080px; margin: 0 auto; padding: 56px 24px 72px; }
-
-  header { margin-bottom: 40px; }
-  .eyebrow {
-    display: inline-flex; align-items: center; gap: 7px;
-    font-family: var(--mono); font-size: 12px; color: var(--ink-3);
-    border: 1px solid var(--line); background: rgba(255,255,255,.02);
-    padding: 5px 11px; border-radius: 999px; margin-bottom: 18px;
-  }
-  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 8px var(--ok); }
-  h1 { font-size: 34px; line-height: 1.25; letter-spacing: -.025em; margin: 0 0 10px; font-weight: 700; }
-  h1 span { color: var(--ink-3); font-weight: 400; font-family: var(--mono); font-size: 22px; }
-  .sub { color: var(--ink-2); font-size: 15px; margin: 0; max-width: 620px; }
-
-  h2 {
-    font-size: 12.5px; text-transform: uppercase; letter-spacing: .12em;
-    color: var(--ink-3); font-weight: 600; margin: 44px 0 16px;
-    font-family: var(--mono);
+    display: flex; flex-direction: column; min-height: 100vh;
   }
 
-  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  /* 背景：极淡网格 + 顶部光晕 */
+  .bg {
+    position: fixed; inset: 0; z-index: -1;
+    background:
+      radial-gradient(900px 420px at 50% -12%, rgba(54,105,236,.10), transparent 70%),
+      linear-gradient(#fff, #FBFDFF);
+  }
+  .bg::after {
+    content: ''; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(to right, rgba(15,23,42,.035) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(15,23,42,.035) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(720px 460px at 50% 22%, #000 0%, transparent 78%);
+    -webkit-mask-image: radial-gradient(720px 460px at 50% 22%, #000 0%, transparent 78%);
+  }
 
-  .card {
-    display: block; text-decoration: none; color: inherit;
-    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-    padding: 20px 22px; transition: border-color .18s, background .18s, transform .18s;
-    position: relative; overflow: hidden;
+  main {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 72px 24px 40px; text-align: center;
   }
-  .card:hover { background: var(--card-h); border-color: #2C4470; transform: translateY(-2px); }
-  .card:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(91,141,239,.4); }
-  .card[data-off] { opacity: .55; }
-  .card[data-off]:hover { transform: none; }
+  .inner { max-width: 660px; width: 100%; }
 
-  .card-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .badge {
-    width: 34px; height: 34px; border-radius: 10px; flex: none;
-    display: grid; place-items: center; font-size: 15px; font-weight: 700;
-    background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff;
+  .mark {
+    width: 64px; height: 64px; border-radius: 18px; margin: 0 auto 26px;
+    background: var(--grad); color: #fff; display: grid; place-items: center;
+    font-size: 28px; font-weight: 700; letter-spacing: -.02em;
+    box-shadow: 0 14px 34px rgba(54,105,236,.32), inset 0 1px 0 rgba(255,255,255,.28);
   }
-  .card h3 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: -.01em; }
-  .card p { color: var(--ink-2); font-size: 13.5px; margin: 0 0 14px; line-height: 1.65; }
 
-  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-  .tag {
-    font-family: var(--mono); font-size: 11px; color: var(--ink-3);
-    border: 1px solid var(--line); padding: 3px 8px; border-radius: 6px;
+  h1 {
+    font-size: 52px; line-height: 1.1; letter-spacing: -.035em;
+    margin: 0 0 8px; font-weight: 800; color: #16233C;
   }
-  .go {
-    font-family: var(--mono); font-size: 12px; color: var(--brand);
-    display: inline-flex; align-items: center; gap: 5px; margin-top: 14px;
+  .py { font-family: var(--mono); font-size: 12.5px; color: #94A3B8; letter-spacing: .26em; margin-bottom: 22px; }
+  .tagline { font-size: 18px; line-height: 1.65; color: var(--ink-2); margin: 0 0 34px; }
+  .tagline b { color: var(--ink); font-weight: 600; }
+
+  .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 16px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 48px; padding: 0 26px; border-radius: 11px; border: 1px solid transparent;
+    font-size: 15px; font-weight: 600; text-decoration: none; cursor: pointer;
+    transition: transform .15s, box-shadow .15s, background .15s, border-color .15s, color .15s;
   }
-  .card[data-off] .go { color: var(--ink-3); }
+  .btn:focus-visible { outline: none; box-shadow: 0 0 0 4px rgba(54,105,236,.22); }
+  .btn-primary { background: var(--grad); color: #fff; box-shadow: 0 8px 22px rgba(54,105,236,.28); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 28px rgba(54,105,236,.34); }
+  .btn-ghost { background: #fff; color: var(--ink-2); border-color: var(--line-2); }
+  .btn-ghost:hover { color: var(--brand); border-color: #B9CCF5; background: #F7FAFF; }
+
+  .hint { font-size: 13px; color: var(--ink-3); margin-bottom: 40px; }
 
   .status {
-    position: absolute; top: 20px; right: 20px;
-    font-family: var(--mono); font-size: 10.5px; letter-spacing: .04em;
-    display: inline-flex; align-items: center; gap: 5px; color: var(--ink-3);
+    display: inline-flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    justify-content: center; padding: 9px 18px;
+    border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.72);
+    backdrop-filter: blur(6px);
+    font-family: var(--mono); font-size: 11.5px; color: var(--ink-3);
   }
-  .status i { width: 6px; height: 6px; border-radius: 50%; display: block; }
-  .status.on i { background: var(--ok); box-shadow: 0 0 7px var(--ok); }
-  .status.demo i { background: var(--warn); }
-  .status.off i { background: var(--off); }
+  .status .s { display: inline-flex; align-items: center; gap: 6px; }
+  .status i { width: 6px; height: 6px; border-radius: 50%; background: #22C55E; box-shadow: 0 0 7px rgba(34,197,94,.7); display: block; }
+  .status .s.demo i { background: #F59E0B; box-shadow: 0 0 7px rgba(245,158,11,.6); }
+  .status .sep { color: var(--line-2); }
 
-  .row {
-    display: flex; align-items: center; justify-content: space-between; gap: 16px;
-    padding: 13px 0; border-bottom: 1px solid var(--line);
-    font-size: 13.5px; color: var(--ink-2);
-  }
-  .row:last-child { border-bottom: none; }
-  .row .k { display: flex; align-items: center; gap: 9px; }
-  .row code {
-    font-family: var(--mono); font-size: 12.5px; color: var(--ink);
-    background: rgba(255,255,255,.045); padding: 3px 8px; border-radius: 6px;
-  }
-  .row a { color: var(--brand); text-decoration: none; font-family: var(--mono); font-size: 12.5px; }
-  .row a:hover { text-decoration: underline; }
-
-  footer {
-    margin-top: 48px; padding-top: 22px; border-top: 1px solid var(--line);
-    color: var(--ink-3); font-size: 12.5px; display: flex;
-    justify-content: space-between; gap: 16px; flex-wrap: wrap;
-    font-family: var(--mono);
+  footer { padding: 20px 24px 26px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 12.5px; }
+  .f-inner {
+    max-width: 800px; margin: 0 auto; display: flex;
+    justify-content: space-between; gap: 14px; flex-wrap: wrap; align-items: center;
   }
   footer a { color: var(--ink-2); text-decoration: none; }
-  footer a:hover { color: var(--ink); }
+  footer a:hover { color: var(--brand); }
+  .f-meta { font-family: var(--mono); font-size: 11.5px; color: #94A3B8; }
 
-  @media (max-width: 760px) {
-    .wrap { padding: 36px 18px 56px; }
-    h1 { font-size: 26px; }
-    .grid { grid-template-columns: 1fr; }
+  @media (max-width: 640px) {
+    main { padding: 52px 20px 32px; }
+    h1 { font-size: 38px; }
+    .tagline { font-size: 16px; }
   }
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="bg"></div>
 
-  <header>
-    <div class="eyebrow"><span class="dot"></span>150.158.49.37 · nginx + docker</div>
-    <h1>服务器项目门户 <span>/ projects</span></h1>
-    <p class="sub">这台机器上跑着几个独立项目。这里是统一入口 —— 公开访问的直接点，内部服务需要对应权限。</p>
-  </header>
+<main>
+  <div class="inner">
+    <div class="mark">职</div>
 
-  <h2>公开项目</h2>
-  <div class="grid">
+    <h1>职镜</h1>
+    <div class="py">Z H I J I N G</div>
 
-    <a class="card" href="/job-matcher/">
-      <div class="status on"><i></i>RUNNING</div>
-      <div class="card-top">
-        <div class="badge">AI</div>
-        <h3>AI 求职助手</h3>
-      </div>
-      <p>粘贴岗位 JD，算匹配度、改定制简历、生成技术复习文档。零依赖 Node.js，数据存在本机。</p>
-      <div class="tags">
-        <span class="tag">Node.js</span>
-        <span class="tag">零依赖</span>
-        <span class="tag">Chrome 扩展</span>
-        <span class="tag">:7788</span>
-      </div>
-      <div class="go">进入 →</div>
-    </a>
+    <p class="tagline">
+      照着 JD 改简历，<b>不猜 HR 想什么</b>。<br>
+      粘贴一份岗位描述，30 秒得到匹配度、要改哪些经历、缺什么技能要补多久。
+    </p>
 
-    <a class="card" href="/demo/">
-      <div class="status demo"><i></i>DEMO</div>
-      <div class="card-top">
-        <div class="badge">AI</div>
-        <h3>AI 求职助手 · 演示</h3>
-      </div>
-      <p>免登录的只读体验版，内置 12 条示例岗位数据。想看效果先来这里。</p>
-      <div class="tags">
-        <span class="tag">免登录</span>
-        <span class="tag">演示数据</span>
-        <span class="tag">:7790</span>
-      </div>
-      <div class="go">体验 →</div>
-    </a>
-
-  </div>
-
-  <h2>运维与工具</h2>
-  <div class="grid">
-
-    <a class="card" href="https://150.158.49.37:34419" target="_blank" rel="noopener">
-      <div class="status on"><i></i>RUNNING</div>
-      <div class="card-top">
-        <div class="badge">运</div>
-        <h3>1Panel 运维面板</h3>
-      </div>
-      <p>服务器管理面板：容器、文件、计划任务、监控、防火墙。</p>
-      <div class="tags">
-        <span class="tag">systemd</span>
-        <span class="tag">:34419</span>
-      </div>
-      <div class="go">打开 ↗</div>
-    </a>
-
-    <a class="card" href="/job-matcher/download/job-matcher-extension.zip">
-      <div class="status on"><i></i>v1.1.0</div>
-      <div class="card-top">
-        <div class="badge">扩</div>
-        <h3>求职助手浏览器扩展</h3>
-      </div>
-      <p>在招聘网站看岗位时一键算匹配度。解压后在 chrome://extensions 手动加载。</p>
-      <div class="tags">
-        <span class="tag">Manifest V3</span>
-        <span class="tag">65 KB</span>
-      </div>
-      <div class="go">下载 →</div>
-    </a>
-
-  </div>
-
-  <h2>运维与内部</h2>
-  <div class="card" style="padding:8px 22px">
-    <div class="row">
-      <span class="k">RustDesk 远程桌面（hbbs / hbbr）</span>
-      <code>21115-21119</code>
+    <div class="cta">
+      <a class="btn btn-primary" href="/job-matcher/">进入工具</a>
+      <a class="btn btn-ghost" href="/demo/">免登录看演示</a>
     </div>
-    <div class="row">
-      <span class="k">PostgreSQL 16</span>
-      <code>127.0.0.1:5432 · 仅本机</code>
-    </div>
-    <div class="row">
-      <span class="k">停车业务 / 微信 API（已下线）</span>
-      <code>配置归档于 conf.d.disabled</code>
-    </div>
-    <div class="row">
-      <span class="k">求职助手健康检查</span>
-      <a href="/api/health">/api/health</a>
+    <div class="hint">无需信用卡 · 简历只存在这台服务器上</div>
+
+    <div class="status">
+      <span class="s"><i></i>主站运行中</span>
+      <span class="sep">·</span>
+      <span class="s demo"><i></i>演示实例</span>
+      <span class="sep">·</span>
+      <span class="s"><i></i>PostgreSQL 16</span>
     </div>
   </div>
+</main>
 
-  <footer>
-    <span>Ubuntu 22.04 · 4C / 3.3G · nginx (docker) 反向代理</span>
-    <span><a href="/job-matcher/">job-matcher</a> · <a href="/demo/">demo</a></span>
-  </footer>
+<footer>
+  <div class="f-inner">
+    <span>单项目服务器 · nginx 反向代理 · 零第三方依赖</span>
+    <span class="f-meta">
+      <a href="/job-matcher/">/job-matcher/</a> ·
+      <a href="/demo/">/demo/</a> ·
+      <a href="/job-matcher/download/job-matcher-extension.zip">扩展</a> ·
+      <a href="https://github.com/zhulifeng728/job-matcher" target="_blank" rel="noopener">GitHub</a>
+    </span>
+  </div>
+</footer>
 
-</div>
 </body>
 </html>
