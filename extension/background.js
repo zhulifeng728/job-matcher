@@ -83,9 +83,14 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       });
 
       if (r && r.ok) {
-        // 补两个跳到网站深链的地址，省去用户自己翻列表
+        // 补跳到网站对应页面的地址，省去用户自己翻列表
         r.link = server + '/#/jobs';
         r.prepLink = server + '/#/prep';
+        // 生成简历：带上岗位 id，网站能直接定位
+        r.resumeLink = r.job?.id
+          ? server + '/#/jobs/' + encodeURIComponent(r.job.id)
+          : server + '/#/jobs';
+        r.learnLink = server + '/#/resume';
       }
       return sendResponse(r);
     }

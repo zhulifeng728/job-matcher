@@ -1156,9 +1156,10 @@ async function boot() {
   await loadJobs();
   await loadResume();
 
-  // 已有简历 → 回到首页；首次使用 → 带到「我的简历」
+  // 有 hash 就按 hash 走（扩展深链），否则回首页
   if (me.hasResume) {
-    switchView('home');
+    if (location.hash) applyRoute();
+    else switchView('home');
   } else {
     switchView('resume');
     setTimeout(() => {
@@ -1168,6 +1169,13 @@ async function boot() {
     }, 100);
   }
 }
+
+window.addEventListener('hashchange', () => {
+  if (routeLock) return;
+  // 未登录时不开路由
+  if (!S.user) return;
+  applyRoute();
+});
 
 function updateUserChip() {
   const el = $('userChip');
@@ -2457,7 +2465,7 @@ async function copyPrepDoc() {
 
 async function openDetail(id) {
   S.detailFrom = 'jobs';
-  switchView('detail');
+  switchView('detail', id);
   $('detailContent').innerHTML = skList(2);
   try {
     const { job } = await api('/api/jobs/' + encodeURIComponent(id));
@@ -2719,7 +2727,59 @@ async function loadSettings() {
    视图切换
    ═══════════════════════════════════════════ */
 
-function switchView(name) {
+/* ═══════════════════════════════════════════
+   路由（hash）
+   ─────────────────────────────────────────
+   为什么需要：浏览器扩展的「改简历 / 备面试」是链接，没有路由就只能回首页。
+   用 hash 而不是 history API，是因为服务端只托管单文件，path 路由会 404。
+   ═══════════════════════════════════════════ */
+
+let routeLock = false;
+
+/** 视图 → hash */
+function hashFor(name, extra) {
+  if (name === 'home') return '';
+  if (name === 'detail' && extra) return '#/jobs/' + encodeURIComponent(extra);
+  return '#/' + name;
+}
+
+/** 当前 hash 对应的视图 */
+function parseHash() {
+  const raw = String(location.hash || '').replace(/^#\/?/, '');
+  if (!raw) return { view: 'home' };
+  const parts = raw.split('/').filter(Boolean);
+  const view = parts[0] || 'home';
+  const KNOWN = ['home', 'resume', 'custom', 'optimize', 'prep', 'jobs', 'detail', 'import', 'extension', 'insights', 'export', 'settings'];
+  if (!KNOWN.includes(view)) return { view: 'home' };
+  return { view, id: parts[1] ? decodeURIComponent(parts[1]) : '' };
+}
+
+/** 写 hash（不触发二次导航） */
+function syncHash(name, extra) {
+  const target = hashFor(name, extra);
+  if (location.hash === target) return;
+  routeLock = true;
+  location.hash = target;
+  // 下一轮事件循环解锁，避免 hashchange 又跑一遍
+  setTimeout(() => { routeLock = false; }, 0);
+}
+
+/** 按当前 hash 导航 */
+function applyRoute() {
+  const { view, id } = parseHash();
+
+  // #/jobs/<id> 和 #/detail/<id> 都进详情页
+  if ((view === 'jobs' || view === 'detail') && id) {
+    // 详情需要先有 job 数据；没有就退回列表
+    if (S.jobs.some((j) => j.id === id)) openDetail(id);
+    else switchView('jobs');
+    return;
+  }
+
+  switchView(view);
+}
+
+function switchView(name, param) {
   document.querySelectorAll('.nav-links button').forEach((b) => {
     b.setAttribute('aria-selected', String(b.dataset.view === name));
   });
@@ -2732,6 +2792,9 @@ function switchView(name) {
   if (name === 'extension') loadTokens();
   if (name === 'custom') loadVersions();
   if (name === 'insights') loadInsights();
+
+  // 同步地址栏，让扩展/书签的深链能定位到具体页面
+  syncHash(name, param);
   if (name === 'optimize') { if (!S.optJob) { setStepper('optStepper', 1); if ($('optPickCard')) $('optPickCard').hidden = false; if ($('optResult')) $('optResult').innerHTML = ''; } }
   if (name === 'prep') { if (!S.prepJob) { setStepper('prepStepper', 1); if ($('prepPickCard')) $('prepPickCard').hidden = false; if ($('prepResult')) $('prepResult').innerHTML = ''; } }
   window.scrollTo(0, 0);

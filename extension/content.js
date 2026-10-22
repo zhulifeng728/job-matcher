@@ -103,6 +103,31 @@
     .tag.warn { background: #fef3c7; color: #b45309; }
     .tag.ok { background: #dcfce7; color: #15803d; }
 
+    /* 职级徽章 */
+    .lvl {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
+    }
+    .lvl.up { background: #fee2e2; color: #b91c1c; }
+    .lvl.same { background: #dcfce7; color: #15803d; }
+    .lvl.down { background: #fef3c7; color: #b45309; }
+    .lvl.unknown { background: #f1f5f9; color: #64748b; }
+    .lvl-why {
+      font-size: 12px; color: #64748b; line-height: 1.6; margin-top: 8px;
+      padding: 9px 11px; background: #f8fafc; border-radius: 8px;
+    }
+
+    /* 学习成本 */
+    .learn-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+    .learn-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; padding: 3px 8px; border-radius: 6px;
+      background: #fef2f2; color: #b91c1c;
+    }
+    .learn-chip b { font-weight: 600; opacity: .75; }
+    .learn-sum { font-size: 12px; color: #64748b; }
+    .learn-sum b { color: #3669EC; }
+
     /* 维度条 */
     .sec-t { font-size: 11.5px; font-weight: 600; color: #94a3b8; letter-spacing: .04em;
       text-transform: uppercase; margin: 18px 0 9px; }
@@ -325,7 +350,30 @@
          <div class="kws">${r.missing.map((k) => `<span class="kw">${esc(k)}</span>`).join('')}</div>`
       : '';
 
-    const srcLabel = {
+    // 职级定位
+  const lv = r.level;
+  const lvCls = { 上浮: 'up', 平级: 'same', 降级: 'down' }[lv?.positioning] || 'unknown';
+  const lvBlock = lv
+    ? `<div class="sec-t">这个岗位对你的定位</div>
+       <div style="margin-bottom:4px">
+         <span class="lvl ${lvCls}">${esc(lv.positioning)}</span>
+         ${lv.requiredYears ? `<span class="tag">要求 ${lv.requiredYears} 年 · 你 ${lv.myYears} 年</span>` : ''}
+       </div>
+       <div class="lvl-why">${esc(lv.reason)}</div>`
+    : '';
+
+  // 技能缺口 + 学习成本
+  const ln = r.learn;
+  const learnBlock = (ln && ln.items?.length)
+    ? `<div class="sec-t">要补的技能</div>
+       <div class="learn-row">
+         ${ln.items.map((x) => `<span class="learn-chip">${esc(x.term)} <b>${x.hours}h</b></span>`).join('')}
+       </div>
+       <div class="learn-sum">合计 <b>${ln.totalHours} 小时</b>，每天 3 小时约 <b>${ln.days} 天</b>。
+       <a href="${esc(r.learnLink || '#')}" target="_blank" rel="noopener" style="color:#3669EC">看怎么学</a></div>`
+    : '';
+
+  const srcLabel = {
       'json-ld': 'JSON-LD 结构化数据',
       'site-rule': '站点规则匹配',
       heuristic: '智能识别',
@@ -356,15 +404,18 @@
           </div>
         </div>
 
+        ${lvBlock}
+
         <div class="sec-t">能力维度</div>
         ${dims || '<div class="li"><span class="txt">未识别到维度</span></div>'}
 
         ${strong ? `<div class="sec-t">你的相关经历</div>${strong}` : ''}
-        ${gaps ? `<div class="sec-t">短板</div>${gaps}` : ''}
+        ${gaps ? `<div class="sec-t">维度短板</div>${gaps}` : ''}
+        ${learnBlock}
         ${missing}
 
         <div class="acts">
-          <a class="btn primary" href="${esc(r.link || '#')}" target="_blank" rel="noopener">改简历</a>
+          <a class="btn primary" href="${esc(r.resumeLink || r.link || '#')}" target="_blank" rel="noopener">生成简历</a>
           <a class="btn" href="${esc(r.prepLink || '#')}" target="_blank" rel="noopener">备面试</a>
         </div>
         <div class="src">识别方式：${esc(srcLabel)} · 正文 ${jd.length ? jd.length.toLocaleString() : '—'} 字</div>

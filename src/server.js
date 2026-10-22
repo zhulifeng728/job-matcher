@@ -693,6 +693,35 @@ const routes = {
         weight: g.weight,
         tip: g.advice,
       })),
+      // 职级定位：看岗位当时最该知道的事
+      level: (() => {
+        try {
+          const lv = buildStrategy(profile, saved).level;
+          return {
+            positioning: lv.positioning,
+            reason: lv.reason,
+            requiredYears: lv.requiredYears,
+            myYears: lv.myYears,
+          };
+        } catch { return null; }
+      })(),
+
+      // 技能缺口 + 学习成本（只给名字和工时，完整路径在网站上）
+      learn: (() => {
+        try {
+          const gaps = (advice?.missingKeywords || []).slice(0, 5).map((term) => ({
+            term, category: 'tool',
+          }));
+          const plan = buildLearningPlan(gaps);
+          const sum = summarizePlan(plan);
+          return {
+            items: plan.map((p) => ({ term: p.term, hours: p.hours, detailed: p.detailed })),
+            totalHours: sum.totalHours,
+            days: sum.days,
+          };
+        } catch { return null; }
+      })(),
+
       missing: (advice?.missingKeywords || []).slice(0, 8),
       corrections: saved.corrections || [],
       url: sourceUrl,
