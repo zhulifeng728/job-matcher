@@ -41,18 +41,20 @@
 
 > **关于 UI 框架**：核心优势是零依赖单文件部署（`node src/server.js` 就能跑）。
 >
-> 选了 [Oat](https://github.com/knadh/oat)（42 KB，零依赖，20 个组件）：
-> `oat.min.css` + `oat.min.js` **直接 vendored 到 `public/vendor/oat/`**，
-> 不走 CDN、不装 npm、离线可用。
+> 选了 [Oat](https://github.com/knadh/oat)（零依赖，20 个组件），
+> 但**只 vendor 了真正用到的 3 个 CSS**：`01-theme` + `toast` + `dialog`（18 KB）
+> 加 `oat.min.js`（11 KB），放在 `public/vendor/oat/`，不走 CDN、离线可用。
 >
-> 关键：Oat 的 CSS **全部包在 `@layer` 里**，我们的样式是 unlayered ——
-> 层叠优先级上我们的永远赢，所以引入它不会破坏现有设计，只补组件。
-> 主题通过 `--primary` / `--ring` / `--border` 等 token 映射到品牌色。
+> **踩过的坑**：一开始引了整包 `oat.min.css`（31 KB）。以为「它的 CSS 全在
+> `@layer` 里，我们的 unlayered 样式一定赢」—— 这个判断是错的。
+> `@layer` 只在**同一个属性**被两边设置时才比较优先级。我们的 `.nav-links`
+> 没设 `background`，Oat 给 `[role=tablist]` 的分段控件底色就照样上身，
+> 导航变成「蓝底容器 + 白色活动块」的双层盒子，很难看。
+>
+> 所以改成**只引需要的组件 CSS**，从源头避免泄漏，体积也更小。
 >
 > 目前用到的：**toast**（替代 26 处 `alert()`）、**dialog**（替代 6 处 `confirm()`）。
-> 后续要日期选择、富文本、上传时可以直接用它的组件，不用再手写。
->
-> 下拉和二级 tab 仍是自己写的（做了渐进增强，视觉更贴合本设计）。
+> 主题通过 `--primary` / `--ring` / `--border` 等 token 映射到品牌色。
 
 ## 两个入口
 

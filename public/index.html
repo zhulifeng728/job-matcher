@@ -6,7 +6,9 @@
 <meta name="color-scheme" content="light">
 <meta name="description" content="基于真实 JD 的 AI 求职工具：岗位匹配分析、简历针对性优化、面试技术复习文档">
 <title>AI 求职助手 · 简历优化与技术复习</title>
-<link rel="stylesheet" href="vendor/oat/oat.min.css">
+<link rel="stylesheet" href="vendor/oat/01-theme.css">
+<link rel="stylesheet" href="vendor/oat/toast.css">
+<link rel="stylesheet" href="vendor/oat/dialog.css">
 <style>
 /* 视觉语言沿用原设计：主色 #3669EC，渐变 #5B8DEF → #3669EC，浅蓝区块 #F5F9FF */
 :root {
@@ -28,6 +30,9 @@
   --warning: #d97706;
   --radius: 10px;
   --z-modal: 3000;
+  --transition-in: 220ms cubic-bezier(.2,.8,.3,1);
+  --transition-out: 160ms cubic-bezier(.4,0,1,1);
+  --transition: 180ms cubic-bezier(.2,.8,.3,1);
 
   --brand: #3669EC; --brand-2: #5B8DEF; --brand-hover: #2B54BD; --brand-deep: #1E3F91;
   --brand-soft: #EEF3FE; --brand-line: #C9D9FA;
@@ -62,11 +67,43 @@ a:hover { text-decoration:underline; }
 .logo { display:flex; align-items:center; gap:9px; font-size:18px; font-weight:700; color:var(--ink); white-space:nowrap; text-decoration:none; }
 .logo:hover { text-decoration:none; }
 .logo-mark { width:26px; height:26px; border-radius:7px; background:var(--grad); display:grid; place-items:center; color:#fff; font-size:12px; font-weight:700; flex:none; }
-.nav-links { display:flex; gap:4px; }
-.nav-links button { padding:8px 13px; border:none; background:transparent; color:var(--ink-2); font-size:15px; font-weight:500; border-radius:var(--r-ctl); cursor:pointer; white-space:nowrap; transition:color .15s,background .15s; }
-.nav-links button:hover { color:var(--brand); background:var(--brand-soft); }
-.nav-links button[aria-selected="true"] { color:var(--brand); font-weight:600; background:var(--brand-soft); }
+/* 主导航：单层、无容器底色；选中态只作用在当前项 */
+/* 一级导航用「底色块」，二级 tab 用「下划线」——
+   不同层级用不同指示器，才分得清主次 */
+.nav-links {
+  display:flex; gap:3px;
+  background:transparent; padding:0; border-radius:0; border:none;
+}
+.nav-links button {
+  padding:8px 14px; border:none; background:transparent;
+  color:var(--ink-2); font-size:14.5px; font-weight:500;
+  border-radius:8px; cursor:pointer; white-space:nowrap;
+  transition:color .15s, background .15s;
+}
+.nav-links button:hover { color:var(--ink); background:var(--bg-soft); }
+.nav-links button[aria-selected="true"] {
+  color:var(--brand-deep); font-weight:600;
+  background:var(--brand-soft);
+}
+.nav-links button[aria-selected="true"]:hover { background:var(--brand-soft); }
+.nav-links button:focus-visible {
+  outline:none; box-shadow:0 0 0 3px rgba(54,105,236,.18);
+}
 .spacer { flex:1; }
+
+/* 右侧账号区 */
+.user-chip {
+  display:inline-flex; align-items:center; gap:7px;
+  padding:4px 10px 4px 4px; border-radius:999px;
+  background:var(--bg-soft); border:1px solid var(--line);
+  font-size:13px; color:var(--ink-2); white-space:nowrap;
+}
+.user-chip .uc-ava {
+  width:22px; height:22px; border-radius:50%; flex:none;
+  background:var(--grad); color:#fff; font-size:11px; font-weight:600;
+  display:grid; place-items:center;
+}
+.nav-actions { display:flex; align-items:center; gap:8px; }
 
 /* 容器 */
 .page { max-width:1200px; margin:0 auto; padding:32px 24px 72px; }
@@ -675,9 +712,11 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         <button role="tab" data-view="settings" aria-selected="false">设置</button>
       </nav>
       <div class="spacer"></div>
-      <span id="userChip" style="font-size:13px;color:var(--ink-3)"></span>
-      <button class="btn btn-sm btn-primary" onclick="switchView('import')">＋ 导入 JD</button>
-      <button class="btn btn-sm btn-ghost" onclick="doLogout()">退出</button>
+      <div class="nav-actions">
+        <span id="userChip" class="user-chip"></span>
+        <button class="btn btn-sm btn-primary" onclick="switchView('import')">＋ 导入 JD</button>
+        <button class="btn btn-sm btn-ghost" onclick="doLogout()">退出</button>
+      </div>
     </div>
   </header>
 
@@ -1511,7 +1550,10 @@ function updateUserChip() {
   const el = $('userChip');
   if (!el) return;
   const u = S.user;
-  el.textContent = u ? (u.displayName || u.username) : '';
+  if (!u) { el.textContent = ''; return; }
+  const name = u.displayName || u.username || '';
+  const initial = (name.trim()[0] || '?').toUpperCase();
+  el.innerHTML = '<span class="uc-ava">' + esc(initial) + '</span><span>' + esc(name) + '</span>';
 }
 
 /* ═══════════════════════════════════════════
