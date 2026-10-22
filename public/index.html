@@ -139,18 +139,31 @@ textarea { min-height:200px; line-height:1.7; resize:vertical; }
 .stat-sub { font-size:12px; color:var(--ink-4); font-variant-numeric:tabular-nums; }
 
 /* 岗位卡 */
-.job { background:#fff; border-radius:var(--r-card); padding:24px; box-shadow:var(--shadow-1); transition:box-shadow .2s; }
-.job + .job { margin-top:16px; }
-.job:hover { box-shadow:var(--shadow-2); }
+.job {
+  background:#fff; border:1px solid var(--line); border-radius:var(--r-card);
+  padding:20px 22px; box-shadow:var(--shadow-1);
+  transition:box-shadow .2s, border-color .2s;
+}
+.job + .job { margin-top:12px; }
+.job:hover { box-shadow:var(--shadow-2); border-color:var(--brand-line); }
 .job-head { display:flex; align-items:flex-start; gap:20px; }
 .job-main { min-width:0; flex:1; }
-.job-title-row { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
-.job-title { font-size:18px; font-weight:600; color:var(--ink); }
+.job-title-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.job-title { font-size:17px; font-weight:600; color:var(--ink); line-height:1.4; }
 .job-company { font-size:14px; color:var(--ink-3); }
-.job-meta { display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:8px; font-size:14px; color:var(--ink-3); }
-.score-block { flex:none; text-align:right; min-width:96px; }
-.score-num { font-size:38px; font-weight:700; letter-spacing:-.03em; font-variant-numeric:tabular-nums; line-height:1; }
-.score-of { font-size:12px; color:var(--ink-4); }
+.job-company { font-size:13.5px; color:var(--ink-3); margin-top:6px; }
+.job-meta {
+  display:flex; flex-wrap:wrap; align-items:center; gap:0 6px;
+  margin-top:6px; font-size:13px; color:var(--ink-3);
+}
+.jm-sep { color:var(--ink-4); }
+.jm-status { color:var(--brand-deep); font-weight:500; }
+.score-block { flex:none; text-align:right; min-width:88px; }
+.score-num {
+  font-size:36px; font-weight:700; letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums; line-height:1;
+}
+.score-of { font-size:11.5px; color:var(--ink-4); margin-top:2px; }
 .badge { display:inline-flex; align-items:center; padding:3px 10px; border-radius:var(--r-badge); font-size:12px; font-weight:600; white-space:nowrap; border:1px solid transparent; }
 .grade-s{color:var(--s);background:var(--s-bg);border-color:var(--s-line);}
 .grade-a{color:var(--a);background:var(--a-bg);border-color:var(--a-line);}
@@ -158,12 +171,33 @@ textarea { min-height:200px; line-height:1.7; resize:vertical; }
 .grade-c{color:var(--c);background:var(--c-bg);border-color:var(--c-line);}
 .grade-d{color:var(--d);background:var(--d-bg);border-color:var(--d-line);}
 .num-s{color:var(--s);} .num-a{color:var(--a);} .num-b{color:var(--b);} .num-c{color:var(--c);} .num-d{color:var(--d);}
-.dims { display:grid; gap:7px; margin-top:18px; padding-top:18px; border-top:1px solid var(--line); }
-.dim { display:grid; grid-template-columns:108px 1fr 58px; align-items:center; gap:12px; font-size:13px; }
+/* 维度区：轨道宽度收敛到 280px，避免宽屏下进度条被拉满显得空洞 */
+.dims {
+  display:grid; gap:6px; grid-template-columns:1fr;
+  margin-top:16px; padding-top:16px; border-top:1px solid var(--line);
+}
+@media (min-width: 900px) {
+  .dims:has(.dim:nth-child(4)) { grid-template-columns:1fr 1fr; column-gap:32px; }
+}
+.dim {
+  display:grid; grid-template-columns:104px 1fr 64px;
+  align-items:center; gap:10px; font-size:12.5px;
+}
 .dim-name { color:var(--ink-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dim-track { height:7px; background:var(--bg-soft-2); border-radius:4px; overflow:hidden; }
-.dim-fill { display:block; height:100%; background:var(--grad); border-radius:4px; transition:width .35s ease; }
-.dim-score { text-align:right; color:var(--ink-3); font-variant-numeric:tabular-nums; }
+.dim-track {
+  height:6px; background:var(--bg-soft-2); border-radius:3px; overflow:hidden;
+  max-width:280px;
+}
+.dim-fill { display:block; height:100%; background:var(--grad); border-radius:3px; transition:width .35s ease; }
+.dim-score {
+  text-align:right; color:var(--ink-2); font-variant-numeric:tabular-nums;
+  font-weight:500;
+}
+.dim-w { color:var(--ink-4); font-weight:400; }
+.dim-rest {
+  grid-column:1 / -1; font-size:12px; color:var(--ink-4);
+  padding-top:2px;
+}
 .tags { display:flex; flex-wrap:wrap; gap:7px; margin-top:16px; }
 .tag { font-size:12px; padding:3px 9px; border-radius:var(--r-badge); background:var(--bg-soft-2); color:var(--ink-2); border:1px solid var(--line); }
 .tag-brand { background:var(--brand-soft); color:var(--brand-deep); border-color:var(--brand-line); }
@@ -1625,14 +1659,21 @@ function renderJobCard(j) {
   const status = j.status || 'new';
   const statusLabel = S.statusOptions[status]?.label || '待投递';
 
-  const dims = (j.dimensions || []).filter((d) => d.score > 0)
-    .sort((a, b) => b.score - a.score)
-    .map((d) => {
-      const pct = Math.min(100, Math.round((d.score / d.weight) * 100));
-      return '<div class="dim"><span class="dim-name" title="' + esc(d.name) + '">' + esc(d.name) + '</span>'
-        + '<span class="dim-track"><span class="dim-fill" style="width:' + pct + '%"></span></span>'
-        + '<span class="dim-score">' + d.score.toFixed(1) + '<span style="color:var(--ink-4)">/' + d.weight + '</span></span></div>';
-    }).join('');
+  const allDims = (j.dimensions || []).slice().sort((a, b) => b.score - a.score);
+  const shown = allDims.filter((d) => d.score > 0);
+  const restCount = allDims.length - shown.length;
+
+  const dims = shown.map((d) => {
+    const pct = Math.min(100, Math.round((d.score / d.weight) * 100));
+    return '<div class="dim">'
+      + '<span class="dim-name" title="' + esc(d.name) + '">' + esc(d.name) + '</span>'
+      + '<span class="dim-track"><span class="dim-fill" style="width:' + pct + '%"></span></span>'
+      + '<span class="dim-score">' + d.score.toFixed(1)
+      + '<span class="dim-w">/' + d.weight + '</span></span></div>';
+  }).join('')
+    + (restCount > 0
+      ? '<div class="dim-rest">其余 ' + restCount + ' 个维度未要求</div>'
+      : '');
 
   const good = (j.domainHits || []).map((d) => '<span class="tag tag-brand">' + esc(d.name) + '</span>').join('');
   const warn = (j.negatives || []).map((n) => '<span class="tag tag-warn">' + esc(n.reason) + '</span>').join('');
@@ -1642,15 +1683,22 @@ function renderJobCard(j) {
   const statusSel = Object.entries(S.statusOptions)
     .map(([k, v]) => '<option value="' + esc(k) + '"' + (k === status ? ' selected' : '') + '>' + esc(v.label) + '</option>').join('');
 
+  const metaBits = [
+    j.salary || '薪资未标注',
+    j.city || '',
+    j.experience || '',
+  ].filter(Boolean);
+
   return '<article class="job" data-id="' + esc(j.id) + '">'
     + '<div class="job-head"><div class="job-main">'
     + '<div class="job-title-row"><span class="job-title">' + esc(j.position) + '</span>'
-    + '<span class="job-company">' + esc(j.company) + '</span>'
-    + '<span class="badge ' + gradeClass(j.grade) + '">' + esc(j.grade) + '</span></div>'
-    + '<div class="job-meta"><span>' + esc(j.salary || '薪资未标注') + '</span>'
-    + (j.city ? '<span>' + esc(j.city) + '</span>' : '')
-    + (j.experience ? '<span>' + esc(j.experience) + '</span>' : '')
-    + '<span>' + esc(statusLabel) + '</span></div></div>'
+    + '<span class="badge ' + gradeClass(j.grade) + '">' + esc(j.grade) + '</span>'
+    + '</div>'
+    + '<div class="job-company">' + esc(j.company) + '</div>'
+    + '<div class="job-meta">'
+    + metaBits.map((x) => '<span class="jm">' + esc(x) + '</span>').join('<span class="jm-sep">·</span>')
+    + '<span class="jm-sep">·</span><span class="jm-status">' + esc(statusLabel) + '</span>'
+    + '</div></div>'
     + '<div class="score-block"><div class="score-num ' + numClass(j.grade) + '">' + esc(j.total) + '</div>'
     + '<div class="score-of">/ 100</div></div></div>'
     + (dims ? '<div class="dims">' + dims + '</div>' : '')

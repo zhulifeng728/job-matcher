@@ -15,6 +15,8 @@
   const HOST_ID = '__jm_shadow_host__';
   let shadow = null;
   let panelOpen = false;
+  let lastFingerprint = null;   // 上次分析的 JD 指纹
+  let analyzing = false;        // 防止并发分析
 
   // 已经注入过就不再重复（SPA 路由切换时会重复执行）
   if (document.getElementById(HOST_ID)) return;
@@ -246,8 +248,12 @@
 
   // ────────── 主流程 ──────────
 
-  async function analyze() {
-    const p = openPanel(stateUI('<div class="sp"></div>正在识别这个页面的岗位描述…'));
+  async function analyze(options = {}) {
+    if (analyzing) return;
+    analyzing = true;
+
+    const p = openPanel(stateUI('<div class="sp"></div>'
+      + (options.auto ? '岗位变了，正在重新分析…' : '正在识别这个页面的岗位描述…')));
 
     // 1. 提取
     let jd;
@@ -268,8 +274,12 @@
           <button class="btn primary" id="pick" style="width:100%">手动选择区域</button>
         </div>`;
       p.querySelector('#pick')?.addEventListener('click', manualPick);
+      analyzing = false;
       return;
     }
+
+    // 记下指纹，用于判断页面内容有没有变
+    lastFingerprint = jd.fingerprint || null;
 
     // 2. 调接口
     p.querySelector('.state').innerHTML = '<div class="sp"></div>正在按你的简历评分…';
@@ -294,10 +304,13 @@
         <div class="ic">${needSetup ? '🔑' : '⚠️'}</div>
         <div class="h">${esc(res?.error || '分析失败')}</div>
         <div>${needSetup ? '点浏览器工具栏的扩展图标，填入服务器地址和令牌。' : '稍后再试，或刷新页面。'}</div>`;
+      analyzing = false;
       return;
     }
 
+    analyzing = false;
     renderResult(p, res, jd);
+    markAnalyzed(jd);
   }
 
   async function manualPick() {
@@ -428,6 +441,57 @@
     if (panelOpen) closePanel();
     else analyze();
   });
+
+  // ══════════════════════════════════════════
+  // 页面切换监听
+  //
+  // 招聘站都是 SPA：点左侧列表换岗位时 URL 和 DOM 变了，但页面没重载。
+  // 之前只有在关闭面板后手动再点一次按钮才会重新分析 ——
+  // 用户看到的是「切换岗位了，插件分数没变」。
+  // ══════════════════════════════════════════
+
+  /** 分析完成后标记一下，用于对比后续变化 */
+  function markAnalyzed(jd) {
+    lastFingerprint = jd.fingerprint || lastFingerprint;
+  }
+
+  /** 内容是否变了 */
+  function contentChanged() {
+    let jd = null;
+    try { jd = window.__JM_EXTRACTOR__?.extractJD?.(); } catch { return false; }
+    if (!jd || jd.error || !jd.fingerprint) return false;
+    if (!lastFingerprint) return true;
+    return jd.fingerprint !== lastFingerprint;
+  }
+
+  let changeTimer = null;
+  function onPageMaybeChanged() {
+    // 只在面板打开时才检查 —— 没打开就没有「显示旧数据」的问题，
+    // 而且 extractJD 有成本，不能一直跑
+    if (!panelOpen || analyzing) return;
+    clearTimeout(changeTimer);
+    changeTimer = setTimeout(() => {
+      if (!panelOpen || analyzing) return;
+      if (contentChanged()) analyze({ auto: true });
+    }, 900);
+  }
+
+  // URL 变化：patch history + popstate
+  ['pushState', 'replaceState'].forEach((method) => {
+    const orig = history[method];
+    history[method] = function patched(...args) {
+      const ret = orig.apply(this, args);
+      onPageMaybeChanged();
+      return ret;
+    };
+  });
+  window.addEventListener('popstate', onPageMaybeChanged);
+
+  // DOM 变化：详情区内容替换（防抖后检查）
+  try {
+    const mo = new MutationObserver(() => onPageMaybeChanged());
+    mo.observe(document.body, { childList: true, subtree: true });
+  } catch { /* 极端情况下忽略 */ }
 
   // 检查连接状态，决定小圆点颜色
   chrome.runtime.sendMessage({ type: 'PING' }).then((r) => {

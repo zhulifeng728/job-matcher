@@ -95,6 +95,30 @@ function visibleText(el) {
   return clean(clone.innerText || clone.textContent || '');
 }
 
+/**
+ * 元素是否落在「列表项」里
+ *
+ * 招聘站常见「左列表 + 右详情」双栏，列表卡片里也有 .company-name / .job-title。
+ * 全局按选择器找第一个匹配会抓到列表的公司名 —— 这是实测踩到的 bug。
+ */
+function inListContext(el) {
+  if (!el) return false;
+  let node = el;
+  let depth = 0;
+  while (node && depth < 8) {
+    if (node.nodeType !== 1) { node = node.parentElement; depth++; continue; }
+    const tag = node.tagName.toLowerCase();
+    if (tag === 'li' || tag === 'ul' || tag === 'ol') return true;
+    const cls = String(node.className || '').toLowerCase();
+    // 明确的列表容器命名
+    if (/(^|[-_])(list|item|card|result|listitem|joblist)([-_]|$)/.test(cls)) return true;
+    // data 属性也常见
+    if (node.dataset && node.dataset.id && tag === 'div' && node.children.length <= 4) return true;
+    node = node.parentElement; depth++;
+  }
+  return false;
+}
+
 /** 用选择器列表依次尝试，返回第一个命中的元素 */
 function pick(selectors) {
   for (const sel of selectors) {
@@ -230,13 +254,47 @@ function fromBody() {
   };
 }
 
-/** 猜标题 */
-function guessTitle() {
-  const h1 = document.querySelector('h1');
-  if (h1) {
-    const t = clean(h1.innerText);
-    if (t.length >= 2 && t.length <= 60) return t;
+/** 猜标题（优先详情区域，避免抓到列表里的岗位名） */
+function guessTitle(scopeEl) {
+  const TITLE_SELS = [
+    '[class*="job-title"]', '[class*="jobTitle"]', '[class*="position-name"]',
+    '[class*="positionName"]', 'h1', 'h2',
+  ];
+
+  const usable = (s) => {
+    const v = clean(s);
+    if (v.length < 2 || v.length > 60) return '';
+    if (/^(职位描述|岗位职责|职位详情|工作职责|招聘|职位信息|公司介绍|职位诱惑)$/.test(v)) return '';
+    return v;
+  };
+
+  // 1. 详情区域优先
+  if (scopeEl) {
+    let node = scopeEl;
+    for (let i = 0; i < 4 && node; i++) {
+      for (const sel of TITLE_SELS) {
+        let el;
+        try { el = node.querySelector(sel); } catch { continue; }
+        if (el && !inListContext(el)) {
+          const v = usable(el.innerText);
+          if (v) return v;
+        }
+      }
+      node = node.parentElement;
+    }
   }
+
+  // 2. 全局，跳过列表
+  for (const sel of TITLE_SELS) {
+    let els;
+    try { els = document.querySelectorAll(sel); } catch { continue; }
+    for (const el of els) {
+      if (inListContext(el)) continue;
+      const v = usable(el.innerText);
+      if (v) return v;
+    }
+  }
+
   const t2 = document.title.split(/[-|_·]/)[0].trim();
   return t2.length <= 60 ? t2 : t2.slice(0, 60);
 }
@@ -252,7 +310,7 @@ function guessTitle() {
  *   4. 标题里的「XX招聘」
  *   5. 域名反推（去掉 www / careers / jobs 等子域）
  */
-function guessCompany(jobTitle) {
+function guessCompany(jobTitle, scopeEl) {
   const strip = (v) => clean(v)
     .replace(/^(careers?\s+at|jobs?\s+at|work\s+at|join)\s+/i, '')
     .replace(/[|｜·—-]+$/, '')
@@ -269,17 +327,38 @@ function guessCompany(jobTitle) {
     return false;
   };
 
-  // 1. 结构化元素
+  // 1. 先在 JD 容器及其祖先里找（详情区的公司名一定在这里面）
   const selectors = [
-    '[class*="company-name"]', '[class*="companyName"]', '[class*="company_title"]',
-    '[class*="company"] a', '[class*="com-name"]', '[class*="corp-name"]',
-    '[class*="brand-name"]', '[itemprop="hiringOrganization"]', '[itemprop="name"]',
-    '[class*="company-info"] [class*="name"]',
+    '[class*="company-title"]', '[class*="company-name"]', '[class*="companyName"]',
+    '[class*="company_title"]', '[class*="company"] a', '[class*="com-name"]',
+    '[class*="corp-name"]', '[class*="brand-name"]', '[itemprop="hiringOrganization"]',
+    '[class*="company-info"] [class*="name"]', '[class*="company-info"]',
   ];
+
+  // 作用域：容器本身 + 上溯 5 层
+  const scopes = [];
+  if (scopeEl) {
+    let node = scopeEl;
+    for (let i = 0; i < 5 && node; i++) { scopes.push(node); node = node.parentElement; }
+  }
+
+  for (const scope of scopes) {
+    for (const sel of selectors) {
+      let els;
+      try { els = scope.querySelectorAll(sel); } catch { continue; }
+      for (const el of els) {
+        const s = strip(el.innerText);
+        if (!bad(s)) return s;
+      }
+    }
+  }
+
+  // 2. 全局找，但跳过列表项里的（列表卡片会污染）
   for (const sel of selectors) {
     let els;
     try { els = document.querySelectorAll(sel); } catch { continue; }
     for (const el of els) {
+      if (inListContext(el)) continue;
       const s = strip(el.innerText);
       if (!bad(s)) return s;
     }
@@ -311,6 +390,17 @@ function guessCompany(jobTitle) {
 }
 
 /**
+ * 内容指纹：判断「还是不是同一个岗位」
+ */
+function fingerprintOf(text) {
+  const s = String(text || '');
+  if (!s) return '';
+  const head = s.slice(0, 160).replace(/\s+/g, '');
+  const tail = s.slice(-80).replace(/\s+/g, '');
+  return s.length + '|' + head + '|' + tail;
+}
+
+/**
  * 主入口：提取当前页面的 JD
  * @returns {{ title, company, text, source, url } | { error }}
  */
@@ -321,13 +411,19 @@ function extractJD() {
     let r = null;
     try { r = layer(); } catch { r = null; }
     if (r && r.text && r.text.length >= 80) {
+      const text = clean(r.text).replace(LEADING_LABELS, '');
+      // 标题/公司都基于「正文所在容器」来找，避免抓到左侧列表卡片的
+      const scopedTitle = clean(r.title) || guessTitle(r.scopeEl);
+      const scopedCompany = clean(r.company) || guessCompany(scopedTitle, r.scopeEl);
       return {
-        title: r.title || guessTitle(),
-        company: r.company || guessCompany(),
-        text: r.text.slice(0, 40000),
+        title: scopedTitle,
+        company: scopedCompany,
+        text: text.slice(0, 40000),
         source: r.source,
         url: location.href,
-        length: r.text.length,
+        length: text.length,
+        // 用于判断「页面内容变了没」（SPA 切岗位时）
+        fingerprint: fingerprintOf(text),
       };
     }
   }
@@ -381,12 +477,13 @@ function extractByPicker() {
       const text = visibleText(el);
       if (text.length < 60) return finish({ error: '选中的区域文字太少，换一个大一点的区域' });
       finish({
-        title: guessTitle(),
-        company: guessCompany(guessTitle()),
+        title: guessTitle(el),
+        company: guessCompany('', el),
         text: text.slice(0, 40000),
         source: 'manual-pick',
         url: location.href,
         length: text.length,
+        fingerprint: fingerprintOf(text),
       });
     };
 
