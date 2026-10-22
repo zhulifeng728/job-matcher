@@ -612,6 +612,111 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
 .bm-help ol { margin:10px 0 0; padding-left:20px; color:var(--ink-2); line-height:1.9; }
 
 /* 登录 */
+/* ══════════ 官网落地页 ══════════ */
+#landingPage { background: #fff; }
+.lp-nav { position:sticky; top:0; z-index:50; background:rgba(255,255,255,.92); backdrop-filter:blur(10px); border-bottom:1px solid var(--line); }
+.lp-nav-inner { max-width:1160px; margin:0 auto; height:64px; display:flex; align-items:center; gap:32px; padding:0 24px; }
+.lp-logo { display:flex; align-items:center; gap:9px; font-size:17px; font-weight:700; color:var(--ink); text-decoration:none; white-space:nowrap; }
+.lp-links { display:flex; gap:26px; flex:1; }
+.lp-links a { font-size:14px; color:var(--ink-2); text-decoration:none; transition:color .15s; }
+.lp-links a:hover { color:var(--brand); }
+.lp-nav-actions { display:flex; gap:8px; align-items:center; }
+
+.lp-hero { background:linear-gradient(160deg,#F5F9FF 0%,#EAF1FE 55%,#F7FAFF 100%); padding:64px 24px 72px; }
+.lp-hero-inner { max-width:1160px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:56px; align-items:center; }
+.lp-eyebrow { display:inline-block; font-size:12.5px; font-weight:600; color:var(--brand-deep);
+  background:#fff; border:1px solid var(--brand-line); padding:5px 12px; border-radius:999px; margin-bottom:18px; }
+.lp-hero h1 { font-size:44px; line-height:1.22; letter-spacing:-.025em; margin:0 0 18px; color:var(--ink); font-weight:800; }
+.lp-sub { font-size:16.5px; line-height:1.75; color:var(--ink-2); margin:0 0 28px; max-width:520px; }
+.lp-cta { display:flex; gap:12px; flex-wrap:wrap; }
+/* 落地页在浅底上，ghost 按钮不能用白色系（会看不见） */
+.lp-hero .btn-hero-ghost,
+.lp-final + .lp-footer,
+.lp-hero .btn-hero-ghost:hover {
+  background:#fff; color:var(--ink-2); border:1px solid var(--line-strong);
+  box-shadow:0 1px 2px rgba(15,23,42,.04);
+}
+.lp-hero .btn-hero-ghost:hover { color:var(--brand); border-color:var(--brand-line); background:#fff; }
+.lp-hero-note { font-size:12.5px; color:var(--ink-4); margin-top:14px; }
+.lp-hero-shot img { width:100%; height:auto; border-radius:14px;
+  box-shadow:0 24px 60px rgba(15,23,42,.16), 0 2px 8px rgba(15,23,42,.06); border:1px solid rgba(255,255,255,.8); }
+
+.lp-stats { background:#fff; border-bottom:1px solid var(--line); }
+.lp-stats-inner { max-width:1160px; margin:0 auto; display:grid; grid-template-columns:repeat(4,1fr); gap:20px; padding:26px 24px; }
+.lp-stats-inner > div { text-align:center; }
+.lp-stats-inner b { display:block; font-size:28px; font-weight:800; color:var(--brand); letter-spacing:-.02em; }
+.lp-stats-inner span { font-size:12.5px; color:var(--ink-3); }
+
+.lp-section { padding:72px 24px; }
+.lp-section-alt { background:var(--bg-soft); }
+.lp-section-inner { max-width:1160px; margin:0 auto; }
+.lp-h2 { font-size:32px; font-weight:800; letter-spacing:-.025em; text-align:center; margin:0 0 12px; }
+.lp-lead { font-size:15.5px; color:var(--ink-3); text-align:center; margin:0 0 44px; }
+
+.lp-features { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.lp-feature { background:#fff; border:1px solid var(--line); border-radius:16px; padding:26px 28px; }
+.lp-fi { font-size:26px; margin-bottom:12px; }
+.lp-feature h3 { font-size:17px; font-weight:700; margin:0 0 8px; }
+.lp-feature p { font-size:14px; line-height:1.75; color:var(--ink-2); margin:0 0 12px; }
+.lp-feature ul { margin:0; padding-left:18px; font-size:13px; line-height:1.9; color:var(--ink-3); }
+
+.lp-cases { display:grid; gap:14px; margin-bottom:36px; }
+.lp-case { display:flex; gap:20px; align-items:flex-start; background:#fff;
+  border:1px solid var(--line); border-radius:14px; padding:20px 22px; }
+.lp-case-score { flex:none; width:60px; height:60px; border-radius:14px; display:grid; place-items:center;
+  font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; }
+.lp-case-score.s-high { background:#E9F9EF; color:#15803d; }
+.lp-case-score.s-mid { background:#FFF6E6; color:#b45309; }
+.lp-case-score.s-low { background:#FEECEC; color:#b91c1c; }
+.lp-case-body h4 { font-size:15.5px; font-weight:600; margin:0 0 6px; }
+.lp-case-body p { font-size:13.5px; line-height:1.75; color:var(--ink-2); margin:0; }
+.lp-case-shot img { width:100%; border-radius:14px; border:1px solid var(--line); box-shadow:0 16px 40px rgba(15,23,42,.1); }
+
+.lp-steps { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+.lp-step { background:#fff; border:1px solid var(--line); border-radius:14px; padding:22px 20px; }
+.lp-step-n { width:28px; height:28px; border-radius:9px; background:var(--brand-soft); color:var(--brand);
+  display:grid; place-items:center; font-size:13px; font-weight:700; margin-bottom:12px; }
+.lp-step h4 { font-size:15px; font-weight:600; margin:0 0 6px; }
+.lp-step p { font-size:13px; line-height:1.7; color:var(--ink-3); margin:0; }
+
+.lp-ext { display:grid; grid-template-columns:1fr 1fr; gap:44px; align-items:center; margin-top:56px;
+  background:#fff; border:1px solid var(--line); border-radius:18px; padding:36px; }
+.lp-ext h3 { font-size:22px; font-weight:700; margin:0 0 10px; }
+.lp-ext p { font-size:14.5px; line-height:1.75; color:var(--ink-2); margin:0 0 14px; }
+.lp-ext ul { margin:0 0 20px; padding-left:18px; font-size:13.5px; line-height:1.9; color:var(--ink-3); }
+.lp-ext-shot img { width:100%; max-width:340px; border-radius:12px; border:1px solid var(--line);
+  box-shadow:0 12px 30px rgba(15,23,42,.12); display:block; margin:0 auto; }
+
+.lp-faq-inner { max-width:760px; }
+.lp-faq { border-bottom:1px solid var(--line); }
+.lp-faq summary { cursor:pointer; padding:18px 0; font-size:15px; font-weight:500; list-style:none; display:flex; align-items:center; gap:10px; }
+.lp-faq summary::-webkit-details-marker { display:none; }
+.lp-faq summary::before { content:'＋'; color:var(--brand); font-size:15px; font-weight:600; }
+.lp-faq[open] summary::before { content:'−'; }
+.lp-faq > div { padding:0 0 18px 25px; font-size:14px; line-height:1.8; color:var(--ink-2); }
+
+.lp-final { text-align:center; padding:76px 24px; background:linear-gradient(160deg,#5B8DEF,#3669EC); color:#fff; }
+.lp-final h2 { font-size:30px; font-weight:800; letter-spacing:-.02em; margin:0 0 12px; }
+.lp-final p { font-size:15px; opacity:.88; margin:0 0 28px; }
+.lp-final .btn-hero-primary { background:#fff; color:var(--brand-deep); }
+.lp-final .btn-hero-ghost { border-color:rgba(255,255,255,.5); color:#fff; }
+
+.lp-footer { padding:28px 24px; background:#0F172A; color:#94a3b8; }
+.lp-footer-inner { max-width:1160px; margin:0 auto; display:flex; gap:10px; flex-wrap:wrap;
+  justify-content:center; font-size:13px; align-items:center; }
+.lp-footer a { color:#cbd5e1; text-decoration:none; }
+.lp-footer a:hover { color:#fff; }
+.lp-footer-sep { opacity:.4; }
+
+@media (max-width: 900px) {
+  .lp-hero-inner, .lp-features, .lp-ext { grid-template-columns: 1fr; gap:32px; }
+  .lp-hero h1 { font-size:32px; }
+  .lp-stats-inner { grid-template-columns: 1fr 1fr; }
+  .lp-steps { grid-template-columns: 1fr 1fr; }
+  .lp-links { display:none; }
+  .lp-hero, .lp-section { padding-left:18px; padding-right:18px; }
+}
+
 .login-wrap { min-height:100dvh; display:grid; place-items:center; padding:24px; background:var(--bg-soft); }
 .login-card { width:100%; max-width:420px; background:#fff; border-radius:16px; box-shadow:var(--shadow-3); padding:40px; }
 .login-logo { width:48px; height:48px; border-radius:12px; background:var(--grad); display:grid; place-items:center; color:#fff; font-weight:700; font-size:15px; margin-bottom:22px; }
@@ -674,6 +779,242 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
 <body>
 
 <!-- ══════════ 登录 ══════════ -->
+<!-- ══════════ 官网落地页（未登录可见）══════════ -->
+<div id="landingPage">
+
+  <header class="lp-nav">
+    <div class="lp-nav-inner">
+      <a class="lp-logo" href="#" onclick="showLanding();return false">
+        <span class="logo-mark">AI</span><span>AI 求职助手</span>
+      </a>
+      <nav class="lp-links">
+        <a href="#feature">功能</a>
+        <a href="#cases">案例</a>
+        <a href="#howto">流程</a>
+        <a href="#faq">常见问题</a>
+      </nav>
+      <div class="lp-nav-actions">
+        <button class="btn btn-sm btn-ghost" onclick="goLogin('login')">登录</button>
+        <button class="btn btn-sm btn-primary" onclick="goLogin('register')">免费开始</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="lp-hero">
+    <div class="lp-hero-inner">
+      <div class="lp-hero-text">
+        <div class="lp-eyebrow">开源 · 数据自持 · 也支持私有部署</div>
+        <h1>别再对着 JD 改简历<br>让岗位要求告诉你该改什么</h1>
+        <p class="lp-sub">
+          粘贴一个岗位描述，30 秒得到：匹配度评分、该改哪些经历、
+          缺什么技能要补多久、以及一份能直接投出去的定制简历。
+        </p>
+        <div class="lp-cta">
+          <button class="btn-hero btn-hero-primary" onclick="goLogin('register')">免费开始使用</button>
+          <button class="btn-hero btn-hero-ghost" onclick="goDemo()">免注册看演示</button>
+        </div>
+        <div class="lp-hero-note">无需信用卡 · 简历只存在你自己的部署里</div>
+      </div>
+      <div class="lp-hero-shot">
+        <img src="img/jobs.png" alt="岗位匹配列表：按匹配度排序，显示各维度得分">
+      </div>
+    </div>
+  </section>
+
+  <!-- 数据条 -->
+  <section class="lp-stats">
+    <div class="lp-stats-inner">
+      <div><b>6</b><span>个能力维度打分</span></div>
+      <div><b>7</b><span>个招聘站点一键识别</span></div>
+      <div><b>9 段</b><span>结构化复习文档</span></div>
+      <div><b>0</b><span>条第三方依赖</span></div>
+    </div>
+  </section>
+
+  <!-- 功能 -->
+  <section class="lp-section" id="feature">
+    <div class="lp-section-inner">
+      <h2 class="lp-h2">三个真正耗时间的问题，三个能直接用的答案</h2>
+      <p class="lp-lead">不是又一个「AI 帮你写简历」。是把判断和产出都做掉。</p>
+
+      <div class="lp-features">
+        <article class="lp-feature">
+          <div class="lp-fi">🎯</div>
+          <h3>岗位匹配：先判断该不该投</h3>
+          <p>按 6 个维度打分，并告诉你这个岗位对你是<strong>上浮 / 平级 / 降级</strong>。
+             投之前就知道值不值得花时间。</p>
+          <ul>
+            <li>维度得分 + 命中关键词</li>
+            <li>年限错配提醒（超 6 年会被怕待不住）</li>
+            <li>外包/驻场等红线自动降分</li>
+          </ul>
+        </article>
+
+        <article class="lp-feature">
+          <div class="lp-fi">✍️</div>
+          <h3>定制简历：产出能投的东西</h3>
+          <p>按 JD 重排要点、补关键词、查 ATS 格式，直接生成一份完整简历。
+             支持打印成 PDF。</p>
+          <ul>
+            <li>关键词覆盖率 + 位置矩阵</li>
+            <li>ATS 检查（单列/标准标题/篇幅）</li>
+            <li>缺的技能给学习路径，学完一键进简历</li>
+          </ul>
+        </article>
+
+        <article class="lp-feature">
+          <div class="lp-fi">📚</div>
+          <h3>技术复习：按岗位生成</h3>
+          <p>不是通用题库。按这个岗位的要求，生成 9 段结构化复习文档，
+             每个主题含伪代码和追问。</p>
+          <ul>
+            <li>P0/P1 优先级 + 7/14/28 天计划</li>
+            <li>面试故事库（STAR 素材）</li>
+            <li>没实践过时的诚实话术</li>
+          </ul>
+        </article>
+
+        <article class="lp-feature">
+          <div class="lp-fi">🧩</div>
+          <h3>浏览器扩展：不用复制粘贴</h3>
+          <p>在 BOSS、智联、猎聘等站点看岗位时，右下角一键算匹配度。
+             切换岗位自动重新分析。</p>
+          <ul>
+            <li>7 个站点自动识别 JD</li>
+            <li>四层降级，改版也能用</li>
+            <li>位置可拖拽，不挡内容</li>
+          </ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 案例 -->
+  <section class="lp-section lp-section-alt" id="cases">
+    <div class="lp-section-inner">
+      <h2 class="lp-h2">同样是「前端」，分数能差 90 分</h2>
+      <p class="lp-lead">下面是一次真实跑测的结果（演示账号数据，公司名已脱敏）。</p>
+
+      <div class="lp-cases">
+        <div class="lp-case">
+          <div class="lp-case-score s-high">91</div>
+          <div class="lp-case-body">
+            <h4>AI 应用前端工程师</h4>
+            <p>架构 100% / AI 落地 91%。7 年经验正好在要求区间，主导过工程化改造。
+               <strong>结论：值得投，重点讲 AI 落地那段。</strong></p>
+          </div>
+        </div>
+        <div class="lp-case">
+          <div class="lp-case-score s-mid">50</div>
+          <div class="lp-case-body">
+            <h4>Senior Frontend Engineer（海外，真实 JD）</h4>
+            <p>架构命中，但缺 A11y、Nx monorepo、Playwright。
+               覆盖率 46%，缺口 7 项。<strong>结论：可投，但要先补 2 项。</strong></p>
+          </div>
+        </div>
+        <div class="lp-case">
+          <div class="lp-case-score s-low">0</div>
+          <div class="lp-case-body">
+            <h4>前端开发工程师（外包驻场）</h4>
+            <p>要求 1-3 年、Vue2 页面搭建。你 7 年、做过架构。
+               <strong>结论：红线命中，直接放弃 —— 投了也是浪费时间。</strong></p>
+          </div>
+        </div>
+      </div>
+
+      <div class="lp-case-shot">
+        <img src="img/resume.png" alt="定制简历：覆盖率、关键词位置矩阵、ATS 检查、简历预览" loading="lazy">
+      </div>
+    </div>
+  </section>
+
+  <!-- 流程 -->
+  <section class="lp-section" id="howto">
+    <div class="lp-section-inner">
+      <h2 class="lp-h2">四步，从简历到面试</h2>
+      <div class="lp-steps">
+        <div class="lp-step">
+          <div class="lp-step-n">1</div>
+          <h4>导入简历</h4>
+          <p>粘贴文本，或上传 .md / .docx。自动拆成可被 JD 匹配的要点。</p>
+        </div>
+        <div class="lp-step">
+          <div class="lp-step-n">2</div>
+          <h4>导入岗位</h4>
+          <p>装浏览器扩展一键抓，或直接粘贴 JD。支持批量导入。</p>
+        </div>
+        <div class="lp-step">
+          <div class="lp-step-n">3</div>
+          <h4>看匹配 + 改简历</h4>
+          <p>按分数排序决定投哪个，再生成针对该岗位的定制简历。</p>
+        </div>
+        <div class="lp-step">
+          <div class="lp-step-n">4</div>
+          <h4>备面试</h4>
+          <p>生成复习文档、整理 STAR 故事，投递后回来记录结果。</p>
+        </div>
+      </div>
+
+      <div class="lp-ext">
+        <div class="lp-ext-text">
+          <h3>浏览器扩展</h3>
+          <p>在招聘网站看岗位时，右下角一键出结果。不用复制、不用切页面。</p>
+          <ul>
+            <li>BOSS / 智联 / 猎聘 / 拉勾 / 前程无忧 / LinkedIn / 牛客</li>
+            <li>切换岗位自动重新分析</li>
+            <li>识别不到时可手动框选</li>
+          </ul>
+          <button class="btn btn-primary" onclick="goLogin('register')">登录后下载</button>
+        </div>
+        <div class="lp-ext-shot"><img src="img/extension.png" alt="招聘网站上的匹配分析面板" loading="lazy"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="lp-section lp-section-alt" id="faq">
+    <div class="lp-section-inner lp-faq-inner">
+      <h2 class="lp-h2">常见问题</h2>
+      <details class="lp-faq"><summary>免费吗？</summary>
+        <div>开源项目，自己部署完全免费。演示站免费试用；如果用默认模型额度，也只是限额，不收费。</div></details>
+      <details class="lp-faq"><summary>我的简历数据存哪？</summary>
+        <div>存在<strong>你部署的那台服务器</strong>上，纯本地 JSON 文件，不上传任何第三方。每个账号数据目录隔离，互不可见。
+            浏览器扩展的令牌也只存在你本地。</div></details>
+      <details class="lp-faq"><summary>需要自己配 AI 模型吗？</summary>
+        <div>不配也能用 —— 评分、简历生成、复习文档都有规则引擎兜底。
+            配了模型（OpenAI 兼容接口 / 本地 Ollama）内容会更贴合你的经历。</div></details>
+      <details class="lp-faq"><summary>支持哪些招聘网站？</summary>
+        <div>BOSS 直聘、智联招聘、猎聘、拉勾、前程无忧、LinkedIn、牛客。
+            其他站点可以用「手动选择区域」框选 JD，或在网页版直接粘贴。</div></details>
+      <details class="lp-faq"><summary>为什么不做自动投递？</summary>
+        <div>投递是不可逆动作，交给人判断更合理。这个工具负责「判断 + 准备材料」，最后那一下你自己点。</div></details>
+    </div>
+  </section>
+
+  <!-- 底部 CTA -->
+  <section class="lp-final">
+    <h2>先看看你手上的岗位，到底值不值得投</h2>
+    <p>导入简历 + 一个 JD，30 秒出结果。</p>
+    <div class="lp-cta" style="justify-content:center">
+      <button class="btn-hero btn-hero-primary" onclick="goLogin('register')">免费开始</button>
+      <button class="btn-hero btn-hero-ghost" onclick="goDemo()">先看演示</button>
+    </div>
+  </section>
+
+  <footer class="lp-footer">
+    <div class="lp-footer-inner">
+      <span>AI 求职助手 · 开源项目</span>
+      <span class="lp-footer-sep">·</span>
+      <a href="https://github.com/zhulifeng728/job-matcher" target="_blank" rel="noopener">GitHub</a>
+      <span class="lp-footer-sep">·</span>
+      <a href="docs/FREE-MODELS.md" target="_blank" rel="noopener">免费模型指南</a>
+      <span class="lp-footer-sep">·</span>
+      <a href="docs/DEPLOY.md" target="_blank" rel="noopener">部署文档</a>
+    </div>
+  </footer>
+</div>
+
 <div id="loginPage" class="login-wrap" hidden>
   <div class="login-card">
     <div class="login-logo">AI</div>
@@ -1461,14 +1802,40 @@ function switchAuth(mode) {
 }
 
 function showLogin() {
+  $('landingPage').hidden = true;
   $('loginPage').hidden = false;
   $('appPage').hidden = true;
   setTimeout(() => ($('authUser').value ? $('authPass') : $('authUser'))?.focus(), 60);
 }
 
 function showApp() {
+  $('landingPage').hidden = true;
   $('loginPage').hidden = true;
   $('appPage').hidden = false;
+}
+
+/** 官网落地页（未登录、无 hash 时显示） */
+function showLanding() {
+  $('landingPage').hidden = false;
+  $('loginPage').hidden = true;
+  $('appPage').hidden = true;
+  window.scrollTo(0, 0);
+}
+
+/** 从落地页去登录/注册 */
+function goLogin(mode) {
+  switchAuth(mode === 'register' ? 'register' : 'login');
+  showLogin();
+}
+
+/** 看演示：跳到公共演示站（免登录） */
+function goDemo() {
+  // 当前站点如果就是演示实例，直接提示账号
+  if (location.pathname.startsWith('/demo')) {
+    toastOk('你已经在演示站了，直接开始即可');
+    return;
+  }
+  window.open('/demo/', '_blank', 'noopener');
 }
 
 $('authForm').addEventListener('submit', async (e) => {
@@ -1490,6 +1857,8 @@ $('authForm').addEventListener('submit', async (e) => {
 
     await api(path, { method: 'POST', body });
     $('authPass').value = '';
+    // 登录成功清掉 #/login，避免地址栏残留
+    if (/^#\/(login|register)/.test(location.hash || '')) history.replaceState(null, '', location.pathname);
     await boot();
   } catch (err) {
     $('loginError').innerHTML = alertHTML(esc(err.message), 'error');
@@ -1506,7 +1875,8 @@ async function doLogout() {
   // 退出后重置为登录模式，避免沿用上次的注册 Tab
   switchAuth('login');
   $('authPass').value = '';
-  showLogin();
+  history.replaceState(null, '', location.pathname);
+  showLanding();
 }
 
 /* ═══════════════════════════════════════════
@@ -1518,11 +1888,20 @@ async function boot() {
   try {
     me = await api('/api/auth/me');
   } catch {
-    showLogin();
+    // 服务不可用时也先给官网页，别让人看到白屏
+    showLanding();
     return;
   }
 
-  if (!me.user) { showLogin(); return; }
+  if (!me.user) {
+    // 未登录：默认看官网；只有明确要登录时才给表单
+    if (/^#\/(login|register)/.test(location.hash || '')) {
+      goLogin(location.hash.includes('register') ? 'register' : 'login');
+    } else {
+      showLanding();
+    }
+    return;
+  }
 
   S.user = me.user;
   S.hasResume = Boolean(me.hasResume);
