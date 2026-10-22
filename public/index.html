@@ -6,9 +6,29 @@
 <meta name="color-scheme" content="light">
 <meta name="description" content="基于真实 JD 的 AI 求职工具：岗位匹配分析、简历针对性优化、面试技术复习文档">
 <title>AI 求职助手 · 简历优化与技术复习</title>
+<link rel="stylesheet" href="vendor/oat/oat.min.css">
 <style>
 /* 视觉语言沿用原设计：主色 #3669EC，渐变 #5B8DEF → #3669EC，浅蓝区块 #F5F9FF */
 :root {
+  /* ── Oat 组件的主题映射（让它的组件用我们的品牌色）── */
+  --oat-primary: var(--brand);
+  --primary: var(--brand);
+  --primary-foreground: #fff;
+  --ring: var(--brand);
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: #fff;
+  --card-foreground: var(--ink);
+  --muted: var(--bg-soft-2);
+  --muted-foreground: var(--ink-3);
+  --border: var(--line);
+  --input: var(--line-strong);
+  --danger: var(--error);
+  --success: #16a34a;
+  --warning: #d97706;
+  --radius: 10px;
+  --z-modal: 3000;
+
   --brand: #3669EC; --brand-2: #5B8DEF; --brand-hover: #2B54BD; --brand-deep: #1E3F91;
   --brand-soft: #EEF3FE; --brand-line: #C9D9FA;
   --grad: linear-gradient(135deg, #5B8DEF 0%, #3669EC 100%);
@@ -276,6 +296,23 @@ textarea { min-height:200px; line-height:1.7; resize:vertical; }
 .md-doc code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); padding:1px 5px; border-radius:4px; color:var(--brand-deep); }
 .md-doc hr { border:none; border-top:1px solid var(--line); margin:28px 0; }
 /* ═══════════ 自定义下拉（渐进增强原生 select）═══════════ */
+/* 确认对话框（原生 dialog + 我们的样式；unlayered 优先于 Oat） */
+dialog.jm-dialog {
+  border: none; padding: 0; margin: auto;
+  width: min(100% - 2rem, 400px); max-width: 400px;
+  border-radius: 14px; background: #fff; color: var(--ink);
+  box-shadow: 0 24px 64px rgba(15,23,42,.24), 0 2px 8px rgba(15,23,42,.08);
+}
+dialog.jm-dialog::backdrop { background: rgba(15,23,42,.45); }
+dialog.jm-dialog[open] { animation: jdIn .18s cubic-bezier(.2,.8,.3,1); }
+@keyframes jdIn { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { dialog.jm-dialog[open] { animation: none; } }
+.jd-body { padding: 22px 24px 18px; }
+.jd-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -.01em; }
+.jd-msg { font-size: 14px; line-height: 1.7; color: var(--ink-2); margin-bottom: 22px; }
+.jd-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.jd-actions .btn { min-width: 80px; }
+
 .sel {
   position: relative; display: inline-flex; align-items: center;
   min-width: 132px; height: 38px; padding: 0 34px 0 13px;
@@ -1408,7 +1445,7 @@ $('authForm').addEventListener('submit', async (e) => {
 });
 
 async function doLogout() {
-  if (!confirm('退出登录？')) return;
+  if (!(await ask('退出登录？下次需要重新输入账号密码。', { title: '退出登录' }))) return;
   try { await api('/api/auth/logout', { method: 'POST' }); } catch {}
   S.user = null; S.jobs = []; S.resumeCache = {}; S.prepCache = {};
   // 退出后重置为登录模式，避免沿用上次的注册 Tab
@@ -1775,9 +1812,9 @@ document.addEventListener('click', async (e) => {
   if (t.dataset.prep) { switchView('prep'); openPrep(t.dataset.prep); return; }
   if (t.dataset.detail) { openDetail(t.dataset.detail); return; }
   if (t.dataset.del) {
-    if (!confirm('确认删除这个岗位？')) return;
+    if (!(await ask('确认删除这个岗位？相关的简历版本和复习记录不受影响。', { title: '删除岗位', okText: '删除', danger: true }))) return;
     try { await api('/api/jobs/' + encodeURIComponent(t.dataset.del), { method: 'DELETE' }); await loadJobs(); }
-    catch (err) { alert('删除失败：' + err.message); }
+    catch (err) { toastErr('删除失败：' + err.message); }
   }
 });
 
@@ -1789,7 +1826,7 @@ document.addEventListener('change', async (e) => {
     const data = await api('/api/jobs?sort=score');
     S.jobs = data.jobs; S.stats = data.stats;
     renderStats(data); updateHomeStats(data);
-  } catch (err) { alert('状态更新失败：' + err.message); await loadJobs(); }
+  } catch (err) { toastErr('状态更新失败：' + err.message); await loadJobs(); }
 });
 
 /* ═══════════════════════════════════════════
@@ -2093,7 +2130,7 @@ async function loadInsights() {
         await loadJobs();
         loadInsights();
       } catch (e) {
-        alert('恢复失败：' + e.message);
+        toastErr('恢复失败：' + e.message);
       }
     });
   } catch (e) {
@@ -2214,8 +2251,8 @@ function renderResumeResult(d) {
 function copyResumeMd() {
   if (!S.lastResume?.markdown) return;
   navigator.clipboard.writeText(S.lastResume.markdown)
-    .then(() => alert('已复制 ' + S.lastResume.markdown.length + ' 字'))
-    .catch(() => alert('复制失败，请手动选中'));
+    .then(() => toastOk('已复制 ' + S.lastResume.markdown.length + ' 字'))
+    .catch(() => toastErr('复制失败，请手动选中文本'));
 }
 
 function downloadResumeMd() {
@@ -2237,12 +2274,12 @@ async function printResume(versionId) {
   try {
     const d = await api('/api/resume/versions/' + encodeURIComponent(id) + '/print');
     const w = window.open('', '_blank');
-    if (!w) { alert('浏览器拦截了弹窗，请允许后重试'); return; }
+    if (!w) { toastErr('浏览器拦截了弹窗，请允许后重试'); return; }
     w.document.write(d.html);
     w.document.close();
     w.onload = () => setTimeout(() => w.print(), 300);
   } catch (e) {
-    alert('打开打印视图失败：' + e.message);
+    toastErr('打开打印视图失败：' + e.message);
   }
 }
 
@@ -2288,12 +2325,12 @@ async function loadVersions() {
     box.querySelectorAll('[data-print-v]').forEach((b) => b.addEventListener('click', () => printResume(b.dataset.printV)));
     box.querySelectorAll('[data-select-v]').forEach((b) => b.addEventListener('click', async () => {
       try { await api('/api/resume/versions/' + b.dataset.selectV + '/select', { method: 'PATCH' }); loadVersions(); }
-      catch (e) { alert('采用失败：' + e.message); }
+      catch (e) { toastErr('采用失败：' + e.message); }
     }));
     box.querySelectorAll('[data-del-v]').forEach((b) => b.addEventListener('click', async () => {
-      if (!confirm('删除这一版简历？')) return;
+      if (!(await ask('删除这一版简历？删除后不可恢复。', { title: '删除版本', okText: '删除', danger: true }))) return;
       try { await api('/api/resume/versions/' + b.dataset.delV, { method: 'DELETE' }); loadVersions(); }
-      catch (e) { alert('删除失败：' + e.message); }
+      catch (e) { toastErr('删除失败：' + e.message); }
     }));
   } catch (e) {
     box.innerHTML = alertHTML('版本加载失败：' + esc(e.message), 'error');
@@ -2317,7 +2354,7 @@ async function viewVersion(id) {
       + '</style></head><body>' + html + '</body></html>');
     w.document.close();
   } catch (e) {
-    alert('加载失败：' + e.message);
+    toastErr('加载失败：' + e.message);
   }
 }
 
@@ -2405,7 +2442,7 @@ async function markLearned(term) {
     // 重新生成，让新技能进入简历
     if (S.currentJob) await generateResumeFor(S.currentJob.id);
   } catch (e) {
-    alert('加入失败：' + e.message);
+    toastErr('加入失败：' + e.message);
   }
 }
 
@@ -2417,7 +2454,7 @@ async function removeLearnedSkill(term) {
     );
     if (S.currentJob) await generateResumeFor(S.currentJob.id);
   } catch (e) {
-    alert('移除失败：' + e.message);
+    toastErr('移除失败：' + e.message);
   }
 }
 
@@ -2553,9 +2590,9 @@ async function loadStories() {
 
     listBox.querySelectorAll('[data-del]').forEach((b) => {
       b.addEventListener('click', async () => {
-        if (!confirm('删除这个故事？')) return;
+        if (!(await ask('删除这个故事？补过的细节会一起丢失。', { title: '删除故事', okText: '删除', danger: true }))) return;
         try { await api('/api/stories/' + b.dataset.del, { method: 'DELETE' }); loadStories(); }
-        catch (e) { alert('删除失败：' + e.message); }
+        catch (e) { toastErr('删除失败：' + e.message); }
       });
     });
 
@@ -2591,7 +2628,7 @@ async function editStory(s) {
     });
     loadStories();
   } catch (e) {
-    alert('保存失败：' + e.message);
+    toastErr('保存失败：' + e.message);
   }
 }
 
@@ -2608,7 +2645,7 @@ if ($('btnSeedStories')) $('btnSeedStories').addEventListener('click', async () 
         alertHTML('简历里的要点都已经生成过故事了。补充新简历内容后可以再生成。', 'info'));
     }
   } catch (e) {
-    alert('生成失败：' + e.message);
+    toastErr('生成失败：' + e.message);
   } finally {
     btn.disabled = false;
     btn.textContent = old;
@@ -2629,7 +2666,7 @@ function copyServerAddr() {
   if (!v) return;
   navigator.clipboard.writeText(v)
     .then(() => { $('tokenStatus').textContent = '✓ 服务器地址已复制'; setTimeout(() => { $('tokenStatus').textContent = ''; }, 2500); })
-    .catch(() => alert('复制失败，请手动选中'));
+    .catch(() => toastErr('复制失败，请手动选中文本'));
 }
 
 async function loadTokens() {
@@ -2664,12 +2701,12 @@ async function loadTokens() {
 
     box.querySelectorAll('[data-revoke]').forEach((btn) => {
       btn.addEventListener('click', async () => {
-        if (!confirm('撤销后使用这个令牌的扩展会立刻失效，确定？')) return;
+        if (!(await ask('撤销后，使用这个令牌的浏览器扩展会立刻失效。', { title: '撤销令牌', okText: '撤销', danger: true }))) return;
         try {
           await api('/api/tokens/' + encodeURIComponent(btn.dataset.revoke), { method: 'DELETE' });
           loadTokens();
         } catch (e) {
-          alert('撤销失败：' + e.message);
+          toastErr('撤销失败：' + e.message);
         }
       });
     });
@@ -2738,7 +2775,7 @@ async function copyNewToken() {
     $('tokenStatus').textContent = '✓ 已复制到剪贴板';
     setTimeout(() => { $('tokenStatus').textContent = ''; }, 2500);
   } catch {
-    alert('复制失败，请手动选中复制');
+    toastErr('复制失败，请手动选中复制');
   }
 }
 
@@ -2787,9 +2824,9 @@ async function copyPrepDoc() {
   if (!S.prepDocText) return;
   try {
     await navigator.clipboard.writeText(S.prepDocText);
-    alert('已复制 ' + S.prepDocText.length + ' 字');
+    toastOk('已复制 ' + S.prepDocText.length + ' 字');
   } catch {
-    alert('复制失败，请手动选择文本');
+    toastErr('复制失败，请手动选择文本');
   }
 }
 
@@ -3006,7 +3043,7 @@ $('btnCopyExport').addEventListener('click', async () => {
     await navigator.clipboard.writeText(S.exportText);
     const b = $('btnCopyExport'); b.textContent = '已复制';
     setTimeout(() => { b.textContent = '复制'; }, 1400);
-  } catch { alert('复制失败，请手动选择文本'); }
+  } catch { toastErr('复制失败，请手动选择文本'); }
 });
 
 $('btnDownloadExport').addEventListener('click', () => {
@@ -3060,6 +3097,85 @@ async function loadSettings() {
 /* ═══════════════════════════════════════════
    视图切换
    ═══════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════
+   反馈组件：toast / 对话框
+   ─────────────────────────────────────────
+   原来用原生 alert() / confirm()，和原生 select 是同一类问题：
+   样式不受控、阻断操作、看起来廉价。
+   现在用 Oat（本地 vendored，42KB，零依赖）的 toast + dialog。
+   Oat 的 CSS 全在 @layer 内，我们的样式优先，不会打架。
+   ═══════════════════════════════════════════ */
+
+/** 轻提示。kind: success | error | info */
+function toast(message, kind = 'info', title) {
+  const variant = { success: 'success', error: 'danger', info: undefined }[kind];
+  try {
+    if (window.ot?.toast) {
+      window.ot.toast(String(message), title, {
+        variant,
+        placement: 'top-center',   // 避开右上角的操作按钮
+        duration: 2600,
+      });
+      return;
+    }
+  } catch { /* 落到下面 */ }
+  // 兜底：Oat 没加载时用不阻断的 console（总比 alert 好）
+  console[kind === 'error' ? 'error' : 'log']('[toast]', message);
+}
+
+const toastOk = (m, t2) => toast(m, 'success', t2);
+const toastErr = (m, t2) => toast(m, 'error', t2);
+
+/**
+ * 确认对话框（返回 Promise<boolean>）
+ * 用原生 <dialog> + Oat 的样式，支持 Esc 关闭、点遮罩关闭、焦点管理
+ */
+function ask(message, { title = '确认操作', okText = '确定', danger = false } = {}) {
+  return new Promise((resolve) => {
+    const dlg = document.createElement('dialog');
+    dlg.className = 'jm-dialog';
+    dlg.innerHTML = '<div class="jd-body">'
+      + '<div class="jd-title">' + esc(title) + '</div>'
+      + '<div class="jd-msg">' + esc(message) + '</div>'
+      + '<div class="jd-actions">'
+      + '<button value="cancel" class="btn">取消</button>'
+      + '<button value="ok" class="btn ' + (danger ? 'btn-danger' : 'btn-primary') + '">'
+      + esc(okText) + '</button>'
+      + '</div></div>';
+
+    document.body.appendChild(dlg);
+
+    const finish = (v) => {
+      dlg.close();
+      dlg.remove();
+      resolve(v);
+    };
+
+    dlg.addEventListener('close', () => {
+      // 点遮罩或 Esc 时 returnValue 为空 → 视为取消
+      resolve(dlg.returnValue === 'ok');
+      dlg.remove();
+    });
+
+    // 点遮罩关闭
+    dlg.addEventListener('click', (e) => {
+      if (e.target === dlg) finish(false);
+    });
+
+    dlg.querySelector('button[value="ok"]')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      finish(true);
+    });
+    dlg.querySelector('button[value="cancel"]')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      finish(false);
+    });
+
+    dlg.showModal();
+    dlg.querySelector('button[value="cancel"]')?.focus();
+  });
+}
 
 /* ═══════════════════════════════════════════
    自定义下拉（渐进增强）
@@ -3349,15 +3465,15 @@ if ($('searchKw')) $('searchKw').addEventListener('input', () => {
 });
 
 if ($('btnRescore')) $('btnRescore').addEventListener('click', async () => {
-  if (!confirm('按当前画像重新给所有岗位评分？原评分会自动备份。')) return;
+  if (!(await ask('按当前画像重新给所有岗位评分？原评分会自动备份。', { title: '重新评分', okText: '重新评分' }))) return;
   const btn = $('btnRescore');
   btn.disabled = true; btn.textContent = '评分中';
   try {
     const r = await api('/api/rescore', { method: 'POST' });
     S.resumeCache = {}; S.prepCache = {};
     await loadJobs();
-    alert('已重新评分 ' + r.count + ' 个岗位');
-  } catch (e) { alert('重新评分失败：' + e.message); }
+    toastOk('已重新评分 ' + r.count + ' 个岗位');
+  } catch (e) { toastErr('重新评分失败：' + e.message); }
   finally { btn.disabled = false; btn.textContent = '重新评分'; }
 });
 
@@ -3401,7 +3517,7 @@ function initBookmarklet() {
       await navigator.clipboard.writeText(code);
       const old = btn.textContent; btn.textContent = '已复制';
       setTimeout(() => { btn.textContent = old; }, 1500);
-    } catch { alert('当前环境无法写入剪贴板。请直接把左侧按钮拖到书签栏即可。'); }
+    } catch { toastErr('当前环境无法写入剪贴板。请直接把左侧按钮拖到书签栏即可。'); }
   });
 }
 
@@ -3409,5 +3525,6 @@ boot();
 initBookmarklet();
 loadSamples();
 </script>
+<script src="vendor/oat/oat.min.js"></script>
 </body>
 </html>

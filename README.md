@@ -39,11 +39,20 @@
 
 **要求**：Node.js 18+（零第三方依赖，不需要 `npm install`）
 
-> **为什么不用 UI 框架**：这个项目的核心优势是零依赖单文件部署
-> （`node src/server.js` 就能跑）。引 Element Plus / Ant Design 要么走 CDN
-> （离线失效、多 1MB），要么上构建链。
-> 所以下拉、开关、面板这些组件都是自己写的 —— 视觉和交互按框架标准
-> （WAI-ARIA、44px 触控、150-300ms 过渡、prefers-reduced-motion），但不引入依赖。
+> **关于 UI 框架**：核心优势是零依赖单文件部署（`node src/server.js` 就能跑）。
+>
+> 选了 [Oat](https://github.com/knadh/oat)（42 KB，零依赖，20 个组件）：
+> `oat.min.css` + `oat.min.js` **直接 vendored 到 `public/vendor/oat/`**，
+> 不走 CDN、不装 npm、离线可用。
+>
+> 关键：Oat 的 CSS **全部包在 `@layer` 里**，我们的样式是 unlayered ——
+> 层叠优先级上我们的永远赢，所以引入它不会破坏现有设计，只补组件。
+> 主题通过 `--primary` / `--ring` / `--border` 等 token 映射到品牌色。
+>
+> 目前用到的：**toast**（替代 26 处 `alert()`）、**dialog**（替代 6 处 `confirm()`）。
+> 后续要日期选择、富文本、上传时可以直接用它的组件，不用再手写。
+>
+> 下拉和二级 tab 仍是自己写的（做了渐进增强，视觉更贴合本设计）。
 
 ## 两个入口
 
