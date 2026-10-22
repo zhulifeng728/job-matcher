@@ -638,7 +638,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
 }
 .lp-hero .btn-hero-ghost:hover { color:var(--brand); border-color:var(--brand-line); background:#fff; }
 .lp-hero-note { font-size:12.5px; color:var(--ink-4); margin-top:14px; }
-.lp-hero-shot img { width:100%; height:auto; border-radius:14px;
+.lp-hero-shot img { width:100%; height:auto; display:block; border-radius:14px;
   box-shadow:0 24px 60px rgba(15,23,42,.16), 0 2px 8px rgba(15,23,42,.06); border:1px solid rgba(255,255,255,.8); }
 
 .lp-stats { background:#fff; border-bottom:1px solid var(--line); }
@@ -670,7 +670,11 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
 .lp-case-score.s-low { background:#FEECEC; color:#b91c1c; }
 .lp-case-body h4 { font-size:15.5px; font-weight:600; margin:0 0 6px; }
 .lp-case-body p { font-size:13.5px; line-height:1.75; color:var(--ink-2); margin:0; }
-.lp-case-shot img { width:100%; border-radius:14px; border:1px solid var(--line); box-shadow:0 16px 40px rgba(15,23,42,.1); }
+.lp-case-shot img {
+  display:block; width:100%; max-width:900px; height:auto; margin:0 auto;
+  border-radius:14px; border:1px solid var(--line);
+  box-shadow:0 16px 40px rgba(15,23,42,.1);
+}
 
 .lp-steps { display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
 .lp-step { background:#fff; border:1px solid var(--line); border-radius:14px; padding:22px 20px; }
@@ -684,8 +688,10 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
 .lp-ext h3 { font-size:22px; font-weight:700; margin:0 0 10px; }
 .lp-ext p { font-size:14.5px; line-height:1.75; color:var(--ink-2); margin:0 0 14px; }
 .lp-ext ul { margin:0 0 20px; padding-left:18px; font-size:13.5px; line-height:1.9; color:var(--ink-3); }
-.lp-ext-shot img { width:100%; max-width:340px; border-radius:12px; border:1px solid var(--line);
-  box-shadow:0 12px 30px rgba(15,23,42,.12); display:block; margin:0 auto; }
+.lp-ext-shot img {
+  width:100%; max-width:340px; height:auto; border-radius:12px; border:1px solid var(--line);
+  box-shadow:0 12px 30px rgba(15,23,42,.12); display:block; margin:0 auto;
+}
 
 .lp-faq-inner { max-width:760px; }
 .lp-faq { border-bottom:1px solid var(--line); }
@@ -817,7 +823,8 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         <div class="lp-hero-note">无需信用卡 · 简历只存在你自己的部署里</div>
       </div>
       <div class="lp-hero-shot">
-        <img src="img/jobs.png" alt="岗位匹配列表：按匹配度排序，显示各维度得分">
+        <img src="img/jobs.jpg" width="1200" height="674" decoding="async"
+             alt="岗位匹配列表：按匹配度排序，显示各维度得分">
       </div>
     </div>
   </section>
@@ -924,7 +931,8 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
       </div>
 
       <div class="lp-case-shot">
-        <img src="img/resume.png" alt="定制简历：覆盖率、关键词位置矩阵、ATS 检查、简历预览" loading="lazy">
+        <img src="img/resume.jpg" width="1425" height="848" decoding="async" loading="lazy"
+             alt="定制简历：覆盖率、关键词位置矩阵、ATS 检查、简历预览">
       </div>
     </div>
   </section>
@@ -967,7 +975,8 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
           </ul>
           <button class="btn btn-primary" onclick="goLogin('register')">登录后下载</button>
         </div>
-        <div class="lp-ext-shot"><img src="img/extension.png" alt="招聘网站上的匹配分析面板" loading="lazy"></div>
+        <div class="lp-ext-shot"><img src="img/extension.jpg" width="800" height="1386" decoding="async" loading="lazy"
+               alt="招聘网站上的匹配分析面板"></div>
       </div>
     </div>
   </section>
@@ -1008,9 +1017,9 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
       <span class="lp-footer-sep">·</span>
       <a href="https://github.com/zhulifeng728/job-matcher" target="_blank" rel="noopener">GitHub</a>
       <span class="lp-footer-sep">·</span>
-      <a href="docs/FREE-MODELS.md" target="_blank" rel="noopener">免费模型指南</a>
+      <a href="https://github.com/zhulifeng728/job-matcher/blob/master/docs/FREE-MODELS.md" target="_blank" rel="noopener">免费模型指南</a>
       <span class="lp-footer-sep">·</span>
-      <a href="docs/DEPLOY.md" target="_blank" rel="noopener">部署文档</a>
+      <a href="https://github.com/zhulifeng728/job-matcher/blob/master/README.md#部署" target="_blank" rel="noopener">部署文档</a>
     </div>
   </footer>
 </div>
@@ -1725,9 +1734,9 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
       <span>AI 求职助手 · 基于真实 JD 的简历优化与面试复习</span>
       <div class="spacer"></div>
       <div class="footer-links">
-        <a href="demo/">演示数据</a>
-        <a href="docs/FREE-MODELS.md" target="_blank" rel="noopener">免费模型指南</a>
-        <a href="docs/DEPLOY.md" target="_blank" rel="noopener">部署文档</a>
+        <a href="/demo/">演示数据</a>
+        <a href="https://github.com/zhulifeng728/job-matcher/blob/master/docs/FREE-MODELS.md" target="_blank" rel="noopener">免费模型指南</a>
+        <a href="https://github.com/zhulifeng728/job-matcher/blob/master/README.md#部署" target="_blank" rel="noopener">部署文档</a>
       </div>
     </div>
   </footer>
@@ -1768,7 +1777,13 @@ async function api(path, opts = {}) {
   });
   let data;
   try { data = await res.json(); } catch { throw new Error('服务返回非 JSON（HTTP ' + res.status + '）'); }
-  if (res.status === 401 && data.needLogin) { showLogin(); throw new Error('需要登录'); }
+  if (res.status === 401 && data.needLogin) {
+    // 只有在「已进入工具」时才踢回登录。
+    // 落地页上也有后台请求（比如扩展状态轮询），
+    // 一 401 就把官网顶掉是 bug。
+    if (!$('appPage').hidden) showLogin();
+    throw new Error('需要登录');
+  }
   if (!res.ok) throw new Error(data.error || ('请求失败（HTTP ' + res.status + '）'));
   return data;
 }
@@ -1835,7 +1850,7 @@ function goDemo() {
     toastOk('你已经在演示站了，直接开始即可');
     return;
   }
-  window.open('/demo/', '_blank', 'noopener');
+  window.open('/demo/', '_blank', 'noopener');   // demo 固定在站点根，不随子路径变化
 }
 
 $('authForm').addEventListener('submit', async (e) => {
@@ -2118,7 +2133,7 @@ function handleResumeImported(r) {
   $('resumeStatus').textContent = '';
   $('resumeResult').innerHTML = alertHTML(
     '解析完成：识别到 <strong>' + esc(s.highlightCount) + '</strong> 条要点、姓名 <strong>'
-    + esc(s.name || '未识别') + '</strong>、年限 <strong>' + esc(s.years || '未识别') + '</strong>。'
+    + esc(s.name || '该岗位') + '</strong>、年限 <strong>' + esc(s.years || '未写明') + '</strong>。'
     + ((s.warnings || []).length ? '<br>' + s.warnings.map((w) => '· ' + esc(w)).join('<br>') : ''),
     (s.warnings || []).length ? 'warn' : 'ok');
   loadResume();
@@ -2183,6 +2198,13 @@ function renderJobList(jobs) {
   enhanceSelects(box);   // 卡片里的状态下拉也换成自定义的
 }
 
+/** 历史数据里存过占位文案，展示前统一归一化（不编造，也不显示假内容） */
+const PLACEHOLDER = /^(未识别公司|未识别职位|未识别|未知|薪资未标注)$/;
+function realOrEmpty(v) {
+  const s = (v == null ? '' : String(v)).trim();
+  return PLACEHOLDER.test(s) ? '' : s;
+}
+
 function renderJobCard(j) {
   const status = j.status || 'new';
   const statusLabel = S.statusOptions[status]?.label || '待投递';
@@ -2213,17 +2235,19 @@ function renderJobCard(j) {
   void statusLabel;
 
   const metaBits = [
-    j.salary || '薪资未标注',
+    realOrEmpty(j.salary) || '薪资未标注',
     j.city || '',
     j.experience || '',
   ].filter(Boolean);
 
   return '<article class="job" data-id="' + esc(j.id) + '">'
     + '<div class="job-head"><div class="job-main">'
-    + '<div class="job-title-row"><span class="job-title">' + esc(j.position) + '</span>'
+    + '<div class="job-title-row"><span class="job-title"'
+    + (realOrEmpty(j.position) ? '' : ' style="color:var(--ink-3)"') + '>'
+    + esc(realOrEmpty(j.position) || '未标注职位') + '</span>'
     + '<span class="badge ' + gradeClass(j.grade) + '">' + esc(j.grade) + '</span>'
     + '</div>'
-    + '<div class="job-company">' + esc(j.company) + '</div>'
+    + (realOrEmpty(j.company) ? '<div class="job-company">' + esc(realOrEmpty(j.company)) + '</div>' : '')
     + '<div class="job-meta">'
     + metaBits.map((x) => '<span class="jm">' + esc(x) + '</span>').join('<span class="jm-sep">·</span>')
     + '<span class="jm-sep">·</span><span class="jm-status">' + esc(statusLabel) + '</span>'

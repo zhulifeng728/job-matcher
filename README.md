@@ -56,6 +56,29 @@
 > 目前用到的：**toast**（替代 26 处 `alert()`）、**dialog**（替代 6 处 `confirm()`）。
 > 主题通过 `--primary` / `--ring` / `--border` 等 token 映射到品牌色。
 
+## 部署结构（本机示例）
+
+```
+http://150.158.49.37/              → 项目门户（静态页，列出这台机器上所有服务）
+http://150.158.49.37/job-matcher/  → 本应用（主实例，需登录）
+http://150.158.49.37/demo/         → 免登录演示实例
+```
+
+应用挂在**子路径**下，靠 nginx 剥掉 `/job-matcher` 前缀转发（`proxy_pass .../`）。
+所以应用内部仍以 `/` 为根，前端所有资源路径都是相对的：
+
+```
+<link href="vendor/oat/01-theme.css">      → /job-matcher/vendor/oat/01-theme.css
+fetch('api/auth/me')                       → /job-matcher/api/auth/me
+```
+
+`apiUrl()` 会把开头的 `/` 去掉，这样换任何子路径都不用改代码。
+同时 nginx 保留根路径 `/api/` 指向主实例 —— 旧版浏览器扩展填 `http://IP` 仍然能用。
+
+配置样例见 [deploy/nginx-ip-portal.conf](deploy/nginx-ip-portal.conf)，门户页见 [portal/index.html](portal/index.html)。
+
+---
+
 ## 三个入口
 
 | 入口 | 说明 |

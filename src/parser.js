@@ -98,8 +98,9 @@ export function parseJD(raw, fallback = {}) {
 
   return {
     id: fallback.id || `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    company: company || '未识别公司',
-    position: position || '未识别职位',
+    // 不编造：识别不到就留空，由界面决定怎么呈现，不塞假数据
+    company: company || '',
+    position: position || '',
     salary: extractSalary(text) || '薪资未标注',
     city: extractCity(text) || fallback.city || '',
     experience: extractExperience(text) || '',
