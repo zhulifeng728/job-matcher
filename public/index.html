@@ -241,6 +241,18 @@ textarea { min-height:200px; line-height:1.7; resize:vertical; }
 .md-doc strong { font-weight:600; color:var(--ink); }
 .md-doc code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); padding:1px 5px; border-radius:4px; color:var(--brand-deep); }
 .md-doc hr { border:none; border-top:1px solid var(--line); margin:28px 0; }
+.sub-tabs {
+  display:flex; gap:4px; margin-bottom:22px; border-bottom:1px solid var(--line); flex-wrap:wrap;
+}
+.sub-tabs button {
+  padding:9px 16px; border:none; background:transparent; cursor:pointer;
+  font-size:14px; font-weight:500; color:var(--ink-3); font-family:inherit;
+  border-bottom:2px solid transparent; margin-bottom:-1px; transition:all .15s;
+}
+.sub-tabs button:hover { color:var(--ink); }
+.sub-tabs button[aria-selected="true"] {
+  color:var(--brand); font-weight:600; border-bottom-color:var(--brand);
+}
 .token-form {
   background:var(--bg-soft); border:1px solid var(--line); border-radius:var(--r-card); padding:16px;
 }
@@ -536,18 +548,14 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
       </a>
       <nav class="nav-links" role="tablist" aria-label="主导航">
         <button role="tab" data-view="home" aria-selected="true">首页</button>
-        <button role="tab" data-view="resume" aria-selected="false">我的简历</button>
-        <button role="tab" data-view="optimize" aria-selected="false">简历优化</button>
-        <button role="tab" data-view="custom" aria-selected="false">定制简历</button>
-        <button role="tab" data-view="prep" aria-selected="false">技术复习</button>
-        <button role="tab" data-view="jobs" aria-selected="false">职位列表</button>
-        <button role="tab" data-view="extension" aria-selected="false">浏览器扩展</button>
-        <button role="tab" data-view="insights" aria-selected="false">洞察</button>
+        <button role="tab" data-view="resume" aria-selected="false">简历</button>
+        <button role="tab" data-view="jobs" aria-selected="false">岗位</button>
+        <button role="tab" data-view="prep" aria-selected="false">复习</button>
         <button role="tab" data-view="settings" aria-selected="false">设置</button>
       </nav>
       <div class="spacer"></div>
       <span id="userChip" style="font-size:13px;color:var(--ink-3)"></span>
-      <button class="btn btn-sm" onclick="switchView('import')">＋ 导入 JD</button>
+      <button class="btn btn-sm btn-primary" onclick="switchView('import')">＋ 导入 JD</button>
       <button class="btn btn-sm btn-ghost" onclick="doLogout()">退出</button>
     </div>
   </header>
@@ -559,7 +567,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         <h1>AI 求职助手</h1>
         <p>基于真实 JD，帮你改简历、备面试、选对岗位</p>
         <div class="hero-actions">
-          <button class="btn-hero btn-hero-primary" onclick="switchView('optimize')">立即优化简历</button>
+          <button class="btn-hero btn-hero-primary" onclick="switchView('jobs')">开始匹配岗位</button>
           <button class="btn-hero btn-hero-ghost" onclick="switchView('prep')">生成技术复习</button>
         </div>
         <div class="hero-stats">
@@ -655,6 +663,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
   <!-- 我的简历 -->
   <section class="view" id="view-resume" hidden>
     <div class="page">
+      <div class="sub-tabs"><button data-goto="resume" aria-selected="true">我的简历</button><button data-goto="custom" aria-selected="false">定制版本</button></div>
       <div class="page-header">
         <h2>我的简历</h2>
         <p>这是整个产品的基础：评分、简历优化、复习清单都基于你这份简历。</p>
@@ -690,7 +699,20 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         <div id="resumeResult" style="margin-top:18px"></div>
       </div>
 
-      <div class="card" id="storiesCard">
+    </div>
+  </section>
+
+  <!-- 简历优化 -->
+
+  <!-- 面试故事 -->
+  <section class="view" id="view-stories" hidden>
+    <div class="page">
+      <div class="sub-tabs"><button data-goto="prep" aria-selected="false">深度复习</button><button data-goto="stories" aria-selected="true">面试故事</button></div>
+      <div class="page-header">
+        <h2>面试故事</h2>
+        <p>把经历拆成 STAR 骨架。同一个故事可以在不同岗位复用，补过的细节会保留。</p>
+      </div>
+      <div class="card">
         <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:6px">
           <div style="flex:1;min-width:220px">
             <h3 class="card-title" style="margin-bottom:4px">面试故事库</h3>
@@ -717,31 +739,11 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
     </div>
   </section>
 
-  <!-- 简历优化 -->
-  <section class="view" id="view-optimize" hidden>
-    <div class="page">
-      <div class="page-header">
-        <h2>简历优化</h2>
-        <p>选一个岗位，按它的要求重排你的简历要点，并生成针对性的简历摘要。</p>
-      </div>
-      <div class="stepper" id="optStepper">
-        <div class="stepper-item on"><span class="stepper-dot">1</span><span class="stepper-label">选择岗位</span></div>
-        <span class="stepper-line"></span>
-        <div class="stepper-item"><span class="stepper-dot">2</span><span class="stepper-label">查看优化建议</span></div>
-      </div>
-      <div class="card" id="optPickCard">
-        <h3 class="card-title">选择要优化的岗位</h3>
-        <p class="card-desc">下面是已导入的岗位。还没有？先点右上角「导入 JD」。</p>
-        <div class="picker-grid" id="optPicker"></div>
-        <div class="toolbar" style="margin-top:20px"><button class="btn" onclick="switchView('import')">导入新岗位</button></div>
-      </div>
-      <div id="optResult"></div>
-    </div>
-  </section>
 
   <!-- 定制简历 -->
   <section class="view" id="view-custom" hidden>
     <div class="page">
+      <div class="sub-tabs"><button data-goto="resume" aria-selected="false">我的简历</button><button data-goto="custom" aria-selected="true">定制版本</button></div>
       <div class="page-header">
         <h2>定制简历</h2>
         <p>针对具体岗位生成的完整简历。可直接复制、下载 Markdown，或打印成 PDF 投出去。</p>
@@ -767,6 +769,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
   <!-- 技术复习 -->
   <section class="view" id="view-prep" hidden>
     <div class="page">
+      <div class="sub-tabs"><button data-goto="prep" aria-selected="true">深度复习</button><button data-goto="stories" aria-selected="false">面试故事</button></div>
       <div class="page-header">
         <h2>技术复习</h2>
         <p>选一个岗位，按它的要求生成知识点清单、面试问题和复习安排。</p>
@@ -833,6 +836,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
   <!-- 导入 -->
   <section class="view" id="view-import" hidden>
     <div class="page">
+      <button class="btn btn-ghost btn-sm" onclick="switchView('jobs')" style="margin-bottom:14px">← 返回岗位列表</button>
       <div class="page-header">
         <h2>导入 JD</h2>
         <p>从 BOSS 直聘、智联招聘、猎聘或公司官网复制岗位描述，粘贴进来即可分析。</p>
@@ -949,6 +953,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
   <!-- 洞察 -->
   <section class="view" id="view-insights" hidden>
     <div class="page">
+      <div class="sub-tabs"><button data-goto="settings" aria-selected="false">账号与 AI</button><button data-goto="extension" aria-selected="false">浏览器扩展</button><button data-goto="insights" aria-selected="true">洞察</button></div>
       <div class="page-header">
         <h2>洞察</h2>
         <p>用你真实的投递结果，反过来校准评分权重 —— 哪些能力真正带来面试，让数据说话。</p>
@@ -962,6 +967,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
   <!-- 浏览器扩展 -->
   <section class="view" id="view-extension" hidden>
     <div class="page">
+      <div class="sub-tabs"><button data-goto="settings" aria-selected="false">账号与 AI</button><button data-goto="extension" aria-selected="true">浏览器扩展</button><button data-goto="insights" aria-selected="false">洞察</button></div>
       <div class="page-header">
         <h2>浏览器扩展</h2>
         <p>在招聘网站看岗位时，右下角一键算匹配度，不用复制粘贴。</p>
@@ -1177,6 +1183,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
   <!-- 设置 -->
   <section class="view" id="view-settings" hidden>
     <div class="page">
+      <div class="sub-tabs"><button data-goto="settings" aria-selected="true">账号与 AI</button><button data-goto="extension" aria-selected="false">浏览器扩展</button><button data-goto="insights" aria-selected="false">洞察</button></div>
       <div class="page-header"><h2>设置</h2><p>运行状态、AI 供应商与评分画像。</p></div>
       <div class="card"><h3 class="card-title">运行状态</h3><dl class="kv" id="settingsStatus"></dl></div>
       <div class="card">
@@ -1363,6 +1370,13 @@ async function boot() {
     }, 100);
   }
 }
+
+// 二级 tab 点击（统一委托）
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-goto]');
+  if (!btn) return;
+  switchView(btn.dataset.goto);
+});
 
 window.addEventListener('hashchange', () => {
   if (routeLock) return;
@@ -1655,7 +1669,7 @@ function renderJobCard(j) {
 document.addEventListener('click', async (e) => {
   const t = e.target.closest('[data-opt],[data-prep],[data-detail],[data-del],[data-rec]');
   if (!t) return;
-  if (t.dataset.opt) { switchView('optimize'); openOptimize(t.dataset.opt); return; }
+  if (t.dataset.opt) { goGenerateResume(t.dataset.opt); return; }
   if (t.dataset.prep) { switchView('prep'); openPrep(t.dataset.prep); return; }
   if (t.dataset.detail) { openDetail(t.dataset.detail); return; }
   if (t.dataset.del) {
@@ -1696,9 +1710,9 @@ function renderPickers(jobs) {
 document.addEventListener('click', (e) => {
   const b = e.target.closest('[data-pick]');
   if (!b) return;
-  const inOptimize = !$('view-optimize').hidden;
+  const inOptimize = !$('view-detail').hidden;
   const inPrep = !$('view-prep').hidden;
-  if (inOptimize) openOptimize(b.dataset.pick);
+  if (inOptimize) goGenerateResume(b.dataset.pick);
   else if (inPrep) openPrep(b.dataset.pick);
 });
 
@@ -1716,36 +1730,9 @@ function setStepper(id, step) {
    简历优化流程
    ═══════════════════════════════════════════ */
 
+/** 兼容旧调用：直接走定制简历流程 */
 async function openOptimize(id) {
-  S.optJob = id;
-  setStepper('optStepper', 2);
-  if ($('optPickCard')) $('optPickCard').hidden = true;
-  const box = $('optResult');
-  box.innerHTML = skList(2);
-
-  const job = S.jobs.find((j) => j.id === id);
-
-  try {
-    let d = S.resumeCache[id];
-    if (!d) {
-      d = await api('/api/jobs/' + encodeURIComponent(id) + '/resume');
-      S.resumeCache[id] = d;
-    }
-    box.innerHTML =
-      '<div class="card" style="margin-bottom:20px">'
-      + '<div style="display:flex;align-items:flex-start;gap:16px">'
-      + '<div style="flex:1;min-width:0"><h3 class="card-title" style="font-size:20px;margin-bottom:4px">' + esc(job?.position || '') + '</h3>'
-      + '<div style="font-size:14px;color:var(--ink-3)">' + esc(job?.company || '') + ' · ' + esc(job?.salary || '') + '</div></div>'
-      + '<div style="text-align:right"><div class="score-num ' + numClass(job?.grade) + '">' + esc(job?.total ?? '') + '</div>'
-      + '<div class="score-of">/ 100</div></div></div>'
-      + '<div class="toolbar" style="margin-top:16px">'
-      + '<button class="btn btn-sm" onclick="resetOptimize()">换一个岗位</button>'
-      + '<button class="btn btn-sm" onclick="switchView(\'prep\');openPrep(\'' + esc(id) + '\')">去看技术复习</button>'
-      + '</div></div>'
-      + renderResumeCards(d);
-  } catch (e) {
-    box.innerHTML = alertHTML('生成失败：' + esc(e.message), 'error');
-  }
+  return goGenerateResume(id);
 }
 
 function resetOptimize() {
@@ -1825,7 +1812,7 @@ async function openPrep(id) {
       + '<div class="score-of">/ 100</div></div></div>'
       + '<div class="toolbar" style="margin-top:16px">'
       + '<button class="btn btn-sm" onclick="resetPrep()">换一个岗位</button>'
-      + '<button class="btn btn-sm" onclick="switchView(\'optimize\');openOptimize(\'' + esc(id) + '\')">去看简历优化</button>'
+      + '<button class="btn btn-sm" onclick="goGenerateResume(\'' + esc(id) + '\')">生成定制简历</button>'
       + '</div></div>'
       + renderPrepCards(d);
 
@@ -2021,6 +2008,17 @@ function cell(n, label, rate) {
 /* ═══════════════════════════════════════════
    定制简历
    ═══════════════════════════════════════════ */
+
+/** 从任何入口「改简历」→ 打开详情页并直接生成（替代原独立的简历优化页） */
+async function goGenerateResume(jobId) {
+  await openDetail(jobId);
+  await generateResumeFor(jobId);
+  // 滚到简历区
+  setTimeout(() => {
+    const el = $('resumeBox');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 300);
+}
 
 async function generateResumeFor(jobId) {
   const box = $('resumeBox');
@@ -2747,7 +2745,7 @@ function renderDetail(job) {
     + '<div class="score-block"><div class="score-num ' + numClass(job.grade) + '">' + esc(job.total) + '</div>'
     + '<div class="score-of">/ 100</div></div></div>'
     + '<div class="toolbar" style="margin-top:20px">'
-    + '<button class="btn btn-sm btn-primary" onclick="switchView(\'optimize\');openOptimize(\'' + esc(job.id) + '\')">改简历</button>'
+    + '<button class="btn btn-sm btn-primary" onclick="goGenerateResume(\'' + esc(job.id) + '\')">改简历</button>'
     + '<button class="btn btn-sm" onclick="switchView(\'prep\');openPrep(\'' + esc(job.id) + '\')">备面试</button>'
     + '</div></div>'
     + warn
@@ -2983,7 +2981,8 @@ function parseHash() {
   if (!raw) return { view: 'home' };
   const parts = raw.split('/').filter(Boolean);
   const view = parts[0] || 'home';
-  const KNOWN = ['home', 'resume', 'custom', 'optimize', 'prep', 'jobs', 'detail', 'import', 'extension', 'insights', 'export', 'settings'];
+  const KNOWN = ['home', 'resume', 'custom', 'prep', 'stories', 'jobs', 'detail',
+    'import', 'extension', 'insights', 'export', 'settings'];
   if (!KNOWN.includes(view)) return { view: 'home' };
   return { view, id: parts[1] ? decodeURIComponent(parts[1]) : '' };
 }
@@ -3013,11 +3012,30 @@ function applyRoute() {
   switchView(view);
 }
 
+/**
+ * 视图归属：导航只有 5 项，二级页面高亮它的父项
+ * 简历 → 我的简历 / 定制版本
+ * 岗位 → 列表 / 详情 / 导入
+ * 复习 → 深度复习 / 面试故事
+ * 设置 → 账号与 AI / 浏览器扩展 / 洞察
+ */
+const VIEW_PARENT = {
+  home: 'home',
+  resume: 'resume', custom: 'resume',
+  jobs: 'jobs', detail: 'jobs', import: 'jobs',
+  prep: 'prep', stories: 'prep',
+  settings: 'settings', extension: 'settings', insights: 'settings', export: 'settings',
+};
+
+const ALL_VIEWS = ['home', 'resume', 'custom', 'prep', 'stories', 'jobs', 'detail',
+  'import', 'extension', 'insights', 'export', 'settings'];
+
 function switchView(name, param) {
+  const parent = VIEW_PARENT[name] || name;
   document.querySelectorAll('.nav-links button').forEach((b) => {
-    b.setAttribute('aria-selected', String(b.dataset.view === name));
+    b.setAttribute('aria-selected', String(b.dataset.view === parent));
   });
-  ['home', 'resume', 'custom', 'optimize', 'prep', 'jobs', 'detail', 'import', 'extension', 'insights', 'export', 'settings'].forEach((v) => {
+  ALL_VIEWS.forEach((v) => {
     const el = $('view-' + v);
     if (el) el.hidden = v !== name;
   });
@@ -3026,10 +3044,10 @@ function switchView(name, param) {
   if (name === 'extension') { fillServerAddr(); loadTokens(); }
   if (name === 'custom') loadVersions();
   if (name === 'insights') loadInsights();
+  if (name === 'stories') loadStories();
 
   // 同步地址栏，让扩展/书签的深链能定位到具体页面
   syncHash(name, param);
-  if (name === 'optimize') { if (!S.optJob) { setStepper('optStepper', 1); if ($('optPickCard')) $('optPickCard').hidden = false; if ($('optResult')) $('optResult').innerHTML = ''; } }
   if (name === 'prep') { if (!S.prepJob) { setStepper('prepStepper', 1); if ($('prepPickCard')) $('prepPickCard').hidden = false; if ($('prepResult')) $('prepResult').innerHTML = ''; } }
   window.scrollTo(0, 0);
 }
