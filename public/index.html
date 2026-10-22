@@ -241,6 +241,14 @@ textarea { min-height:200px; line-height:1.7; resize:vertical; }
 .md-doc strong { font-weight:600; color:var(--ink); }
 .md-doc code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); padding:1px 5px; border-radius:4px; color:var(--brand-deep); }
 .md-doc hr { border:none; border-top:1px solid var(--line); margin:28px 0; }
+.token-form {
+  background:var(--bg-soft); border:1px solid var(--line); border-radius:var(--r-card); padding:16px;
+}
+.token-form input {
+  padding:9px 12px; font-size:13.5px; border:1px solid var(--line-strong);
+  border-radius:var(--r-ctl); font-family:inherit;
+}
+.token-form input:focus { outline:none; border-color:var(--brand); box-shadow:0 0 0 3px rgba(54,105,236,.1); }
 .token-explain {
   background:var(--bg-soft); border-radius:var(--r-card); padding:14px 16px; margin-bottom:16px;
 }
@@ -2570,30 +2578,57 @@ async function loadTokens() {
   }
 }
 
-if ($('btnNewToken')) $('btnNewToken').addEventListener('click', async () => {
-  const name = prompt('给这个令牌起个名字（比如「家里的 Chrome」）', '浏览器扩展');
-  if (name === null) return;
+if ($('btnNewToken')) $('btnNewToken').addEventListener('click', () => {
+  // 不再用浏览器原生 prompt()：被拦掉或误点取消就完全没有反馈，
+  // 用户只会觉得「点了没反应」。改成页面内输入。
+  const box = $('newTokenBox');
+  if (!box) return;
 
-  const btn = $('btnNewToken');
-  btn.disabled = true;
-  try {
-    const d = await api('/api/tokens', { method: 'POST', body: { name: name || '浏览器扩展' } });
-    const box = $('newTokenBox');
-    box.hidden = false;
-    box.innerHTML = '<div class="alert alert-warn" style="margin-bottom:12px">'
-      + '<strong>这个令牌只显示一次</strong>，关掉就再也看不到了。现在复制填到扩展里。</div>'
-      + '<div class="token-box" id="newTokenValue">' + esc(d.token) + '</div>'
-      + '<div class="toolbar" style="margin-top:12px">'
-      + '<button class="btn btn-sm btn-primary" onclick="copyNewToken()">复制令牌</button>'
-      + '<span style="font-size:12.5px;color:var(--ink-4)">复制后到扩展弹窗粘贴，点「保存并连接」</span></div>';
-    S.newToken = d.token;
-    loadTokens();
-  } catch (e) {
-    $('newTokenBox').hidden = false;
-    $('newTokenBox').innerHTML = alertHTML('生成失败：' + esc(e.message), 'error');
-  } finally {
-    btn.disabled = false;
-  }
+  box.hidden = false;
+  box.innerHTML = '<div class="token-form">'
+    + '<label class="field-label" for="newTokenName">给这个令牌起个名字（方便以后认出是哪台设备）</label>'
+    + '<div style="display:flex;gap:8px;margin-top:8px">'
+    + '<input type="text" id="newTokenName" placeholder="比如：家里的 Chrome" value="我的 Chrome" style="flex:1">'
+    + '<button class="btn btn-primary" id="btnConfirmToken">生成</button>'
+    + '<button class="btn btn-ghost" id="btnCancelToken">取消</button>'
+    + '</div>'
+    + '<div id="tokenErr" style="margin-top:10px"></div>'
+    + '</div>';
+
+  const nameEl = $('newTokenName');
+  nameEl.focus();
+  nameEl.select();
+
+  $('btnCancelToken').addEventListener('click', () => { box.hidden = true; box.innerHTML = ''; });
+
+  const create = async () => {
+    const name = (nameEl.value || '').trim() || '浏览器扩展';
+    const btn = $('btnConfirmToken');
+    btn.disabled = true;
+    btn.textContent = '生成中…';
+
+    try {
+      const d = await api('/api/tokens', { method: 'POST', body: { name } });
+      S.newToken = d.token;
+
+      box.innerHTML = '<div class="alert alert-warn" style="margin-bottom:12px">'
+        + '<strong>这个令牌只显示一次</strong>，关掉或刷新页面就再也看不到了。现在复制填到扩展里。</div>'
+        + '<div class="token-box" id="newTokenValue">' + esc(d.token) + '</div>'
+        + '<div class="toolbar" style="margin-top:12px">'
+        + '<button class="btn btn-sm btn-primary" onclick="copyNewToken()">复制令牌</button>'
+        + '<span style="font-size:12.5px;color:var(--ink-4)">复制后到扩展弹窗粘贴，点「保存并连接」</span></div>';
+
+      $('tokenStatus').textContent = '✓ 已生成，记得复制';
+      loadTokens();
+    } catch (e) {
+      $('tokenErr').innerHTML = alertHTML('生成失败：' + esc(e.message), 'error');
+      btn.disabled = false;
+      btn.textContent = '生成';
+    }
+  };
+
+  $('btnConfirmToken').addEventListener('click', create);
+  nameEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') create(); });
 });
 
 async function copyNewToken() {
