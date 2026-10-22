@@ -137,4 +137,11 @@ for (const id of ['server', 'token']) {
   });
 }
 
+// 「去网站生成令牌」→ 打开网站的浏览器扩展页
+$('openTokenPage')?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const server = normalizeServer($('server').value) || DEFAULTS.server;
+  await chrome.tabs.create({ url: server + '/#/extension' });
+});
+
 load();

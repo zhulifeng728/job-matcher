@@ -973,64 +973,6 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         <p>在招聘网站看岗位时，右下角一键算匹配度，不用复制粘贴。</p>
       </div>
 
-      <div class="card" style="margin-bottom:20px">
-        <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
-          <div style="flex:1;min-width:260px">
-            <h3 class="card-title" style="margin-bottom:6px">为什么用扩展</h3>
-            <p class="card-desc" style="margin-bottom:14px">
-              在 BOSS 直聘、智联、猎聘、拉勾、前程无忧、LinkedIn、牛客上打开任何岗位详情页，
-              点右下角蓝色按钮，就能看到这个岗位和你简历的匹配度、维度得分、短板和缺失关键词。
-            </p>
-            <div class="tags">
-              <span class="tag tag-brand">不用复制粘贴</span>
-              <span class="tag">只读取你正打开的页面</span>
-              <span class="tag">不调用平台接口</span>
-              <span class="tag">令牌只存浏览器</span>
-            </div>
-          </div>
-          <div style="flex:none;width:200px;text-align:center">
-            <div style="width:64px;height:64px;margin:0 auto 12px;border-radius:18px;
-              background:linear-gradient(135deg,#5B8DEF,#3669EC);display:flex;align-items:center;
-              justify-content:center;color:#fff;font-weight:700;font-size:24px;
-              box-shadow:0 8px 24px rgba(54,105,236,.3)">AI</div>
-            <a class="btn btn-primary" href="download/job-matcher-extension.zip" download
-               style="display:block">下载扩展</a>
-            <div style="font-size:11.5px;color:var(--ink-4);margin-top:8px">v1.0.0 · 46 KB</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="card" style="margin-bottom:20px">
-        <h3 class="card-title">安装（4 步，约 1 分钟）</h3>
-        <ol class="steps-ol">
-          <li>
-            <strong>下载并解压</strong><br>
-            <span class="step-hint">下载上面的 zip，双击解压。得到一个 <code>jm-extension</code> 文件夹，
-            里面能看到 <code>manifest.json</code>。把这个文件夹放到一个你不会删的位置。</span>
-          </li>
-          <li>
-            <strong>打开扩展管理页</strong><br>
-            <span class="step-hint">
-              Chrome 地址栏输入 <code>chrome://extensions</code>（Edge 用 <code>edge://extensions</code>），
-              打开右上角「开发者模式」。
-            </span>
-          </li>
-          <li>
-            <strong>加载扩展</strong><br>
-            <span class="step-hint">点「加载已解压的扩展程序」，选中第 1 步解压出来的那个文件夹。</span>
-          </li>
-          <li>
-            <strong>连接你的账号</strong><br>
-            <span class="step-hint">点浏览器工具栏的扩展图标，填服务器地址和令牌。<b>令牌在下面「访问令牌」一节生成</b>，复制粘贴即可。</span>
-          </li>
-        </ol>
-
-        <div class="alert alert-info" style="margin-top:16px">
-          <b>为什么要手动加载</b>：上架 Chrome 应用商店需要开发者账号和审核，
-          目前没做。手动加载一样能用，只是换电脑要重装一次。
-        </div>
-      </div>
-
       <div class="card" style="margin-bottom:20px" id="tokenCard">
         <h3 class="card-title">访问令牌</h3>
         <p class="card-desc" style="margin-bottom:14px">
@@ -1088,6 +1030,37 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
 
         <div id="newTokenBox" style="margin-top:16px" hidden></div>
         <div id="tokenList" style="margin-top:18px"></div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <h3 class="card-title">安装（4 步，约 1 分钟）</h3>
+        <ol class="steps-ol">
+          <li>
+            <strong>下载并解压</strong><br>
+            <span class="step-hint">下载上面的 zip，双击解压。得到一个 <code>jm-extension</code> 文件夹，
+            里面能看到 <code>manifest.json</code>。把这个文件夹放到一个你不会删的位置。</span>
+          </li>
+          <li>
+            <strong>打开扩展管理页</strong><br>
+            <span class="step-hint">
+              Chrome 地址栏输入 <code>chrome://extensions</code>（Edge 用 <code>edge://extensions</code>），
+              打开右上角「开发者模式」。
+            </span>
+          </li>
+          <li>
+            <strong>加载扩展</strong><br>
+            <span class="step-hint">点「加载已解压的扩展程序」，选中第 1 步解压出来的那个文件夹。</span>
+          </li>
+          <li>
+            <strong>连接你的账号</strong><br>
+            <span class="step-hint">点浏览器工具栏的扩展图标，填服务器地址和令牌。<b>令牌在下面「访问令牌」一节生成</b>，复制粘贴即可。</span>
+          </li>
+        </ol>
+
+        <div class="alert alert-info" style="margin-top:16px">
+          <b>为什么要手动加载</b>：上架 Chrome 应用商店需要开发者账号和审核，
+          目前没做。手动加载一样能用，只是换电脑要重装一次。
+        </div>
       </div>
 
       <div class="card" style="margin-bottom:20px">
@@ -1176,14 +1149,40 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         </details>
       </div>
 
-      
+  <!-- 设置 -->
+<div class="card" style="margin-bottom:20px">
+        <div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap">
+          <div style="flex:1;min-width:260px">
+            <h3 class="card-title" style="margin-bottom:6px">为什么用扩展</h3>
+            <p class="card-desc" style="margin-bottom:14px">
+              在 BOSS 直聘、智联、猎聘、拉勾、前程无忧、LinkedIn、牛客上打开任何岗位详情页，
+              点右下角蓝色按钮，就能看到这个岗位和你简历的匹配度、维度得分、短板和缺失关键词。
+            </p>
+            <div class="tags">
+              <span class="tag tag-brand">不用复制粘贴</span>
+              <span class="tag">只读取你正打开的页面</span>
+              <span class="tag">不调用平台接口</span>
+              <span class="tag">令牌只存浏览器</span>
+            </div>
+          </div>
+          <div style="flex:none;width:200px;text-align:center">
+            <div style="width:64px;height:64px;margin:0 auto 12px;border-radius:18px;
+              background:linear-gradient(135deg,#5B8DEF,#3669EC);display:flex;align-items:center;
+              justify-content:center;color:#fff;font-weight:700;font-size:24px;
+              box-shadow:0 8px 24px rgba(54,105,236,.3)">AI</div>
+            <a class="btn btn-primary" href="download/job-matcher-extension.zip" download
+               style="display:block">下载扩展</a>
+            <div style="font-size:11.5px;color:var(--ink-4);margin-top:8px">v1.0.0 · 46 KB</div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
-  <!-- 设置 -->
   <section class="view" id="view-settings" hidden>
     <div class="page">
       <div class="sub-tabs"><button data-goto="settings" aria-selected="true">账号与 AI</button><button data-goto="extension" aria-selected="false">浏览器扩展</button><button data-goto="insights" aria-selected="false">洞察</button></div>
+      <div id="settingsHint"></div>
       <div class="page-header"><h2>设置</h2><p>运行状态、AI 供应商与评分画像。</p></div>
       <div class="card"><h3 class="card-title">运行状态</h3><dl class="kv" id="settingsStatus"></dl></div>
       <div class="card">
@@ -3039,7 +3038,18 @@ function switchView(name, param) {
     const el = $('view-' + v);
     if (el) el.hidden = v !== name;
   });
-  if (name === 'settings') loadSettings();
+  if (name === 'settings') {
+    loadSettings();
+    // 提示：要装扩展的人会先想到设置，这里给一条直达路径
+    const hint = $('settingsHint');
+    if (hint) {
+      hint.innerHTML = '<div class="alert alert-info" style="margin:0 0 18px;display:flex;'
+        + 'align-items:center;gap:12px;flex-wrap:wrap">'
+        + '<span style="flex:1">要装浏览器扩展？访问令牌在「浏览器扩展」里 —— 生成后复制到扩展弹窗即可。</span>'
+        + '<button class="btn btn-sm btn-primary" onclick="switchView(\'extension\')">去拿令牌</button>'
+        + '</div>';
+    }
+  }
   if (name === 'resume') loadResume();
   if (name === 'extension') { fillServerAddr(); loadTokens(); }
   if (name === 'custom') loadVersions();
