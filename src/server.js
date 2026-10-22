@@ -32,6 +32,10 @@ import { tailorResume, buildStudyPlan } from './tailor.js';
 import { generatePrepDoc, hasAI } from './deep-prep.js';
 import { renderMarkdown } from './markdown.js';
 import { buildStrategy } from './level.js';
+import { extractKeywords, generateResume, renderPrintableHTML } from './generate.js';
+import {
+  addVersion, loadVersions, getVersion, selectVersion, deleteVersion, publicVersion,
+} from './versions.js';
 import {
   loadStories, seedStoriesFromResume, updateStory, deleteStory,
   pickStoriesForJob, storyGaps, STORY_TYPES, markStoryUsed,
@@ -690,6 +694,117 @@ const routes = {
       missing: (advice?.missingKeywords || []).slice(0, 8),
       corrections: saved.corrections || [],
       url: sourceUrl,
+    };
+  },
+
+  // ─────────── 定制简历 ───────────
+
+  /**
+   * 生成针对该岗位的简历
+   * 返回完整 Markdown + 覆盖率 + 关键词位置矩阵 + ATS 检查
+   */
+  'POST /api/jobs/:id/generate-resume': async (q, params, body) => {
+    const v = validateId(params.id);
+    if (!v.ok) return { error: v.error, status: 400 };
+
+    const job = loadJobs().find((j) => j.id === v.id);
+    if (!job) return { error: '岗位不存在', status: 404 };
+
+    const profile = loadProfile();
+    if (!profile) return { error: '还没有导入简历，请先到「我的简历」导入', status: 400 };
+
+    // 复用已有的定制分析（要点强弱分桶）
+    const scoreResult = {
+      total: job.total, grade: job.grade,
+      breakdown: {
+        dimensions: (job.dimensions || []).map((d) => ({
+          id: d.id, name: d.name, weight: d.weight, ratio: d.ratio, hits: d.hits || [],
+        })),
+      },
+    };
+    const tailored = tailorResume(job, profile, scoreResult);
+
+    const gen = generateResume(profile, job, tailored);
+    const saved = addVersion({
+      jobId: job.id,
+      jobTitle: job.position,
+      company: job.company,
+      markdown: gen.markdown,
+      coverage: gen.coverage,
+      stats: {
+        charCount: gen.markdown.length,
+        bulletCount: gen.bulletCount,
+        mustHaveTotal: gen.mustHaveTotal,
+        mustHaveOwned: gen.mustHaveOwned,
+        gaps: gen.gaps.length,
+      },
+    });
+
+    return {
+      ok: true,
+      reused: Boolean(saved.reused),
+      version: { ...saved.version, markdown: undefined },
+      markdown: gen.markdown,
+      coverage: gen.coverage,
+      mustHave: { total: gen.mustHaveTotal, owned: gen.mustHaveOwned },
+      matrix: gen.matrix,
+      density: gen.density,
+      checks: gen.checks,
+      gaps: gen.gaps,
+      skillGroups: gen.skillGroups,
+    };
+  },
+
+  /** 版本列表 */
+  'GET /api/resume/versions': async () => {
+    const list = loadVersions().map((v) => publicVersion(v, false));
+    return { versions: list.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)) };
+  },
+
+  /** 某一版的 Markdown */
+  'GET /api/resume/versions/:id': async (q, params) => {
+    const v = getVersion(params.id);
+    if (!v) return { error: '版本不存在', status: 404 };
+    return { version: publicVersion(v, true) };
+  },
+
+  /** 打印视图（用于浏览器「存为 PDF」） */
+  'GET /api/resume/versions/:id/print': async (q, params) => {
+    const v = getVersion(params.id);
+    if (!v) return { error: '版本不存在', status: 404 };
+    const profile = loadProfile();
+    const job = { position: v.jobTitle, company: v.company };
+    return {
+      html: renderPrintableHTML(profile || {}, job, v.markdown),
+      title: (profile?.profile?.name || '简历') + ' - ' + v.jobTitle,
+    };
+  },
+
+  /** 采用某一版 */
+  'PATCH /api/resume/versions/:id/select': async (q, params) => {
+    const r = selectVersion(params.id);
+    return r ? { ok: true, version: r } : { error: '版本不存在', status: 404 };
+  },
+
+  'DELETE /api/resume/versions/:id': async (q, params) => {
+    return deleteVersion(params.id) ? { ok: true } : { error: '版本不存在', status: 404 };
+  },
+
+  /** 关键词提取预览（不生成简历） */
+  'GET /api/jobs/:id/keywords': async (q, params) => {
+    const v = validateId(params.id);
+    if (!v.ok) return { error: v.error, status: 400 };
+    const job = loadJobs().find((j) => j.id === v.id);
+    if (!job) return { error: '岗位不存在', status: 404 };
+
+    const kw = extractKeywords(job.text || job.position || '');
+    const profile = loadProfile();
+    const fromMine = new Set((profile?.highlights || []).flatMap((h) => h.keywords || []).map((x) => String(x).toLowerCase()));
+
+    return {
+      mustHave: kw.mustHave.map((k) => ({ ...k, owned: fromMine.has(k.term.toLowerCase()) })),
+      niceToHave: kw.niceToHave.map((k) => ({ ...k, owned: fromMine.has(k.term.toLowerCase()) })),
+      categories: kw.categories,
     };
   },
 

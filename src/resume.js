@@ -98,16 +98,36 @@ export function parseResume(raw) {
   const bullets = [];
 
   // 优先从工作/项目段抽带列表前缀的行
+  // 工作条目：「2021.03 - 至今   某科技公司   前端负责人」
+  const workEntries = [];
+
   for (const key of ['work', 'project']) {
     let currentOrg = '';
+    let currentEntry = null;
+
     for (const line of sections[key]) {
       const t = line.trim();
+
       if (BULLET_RE.test(t)) {
         const body = clean(t.replace(BULLET_RE, ''));
-        if (body.length >= 8) bullets.push({ text: body, from: key, org: currentOrg });
-      } else if (t.length <= 40 && /\d{4}|公司|集团|科技|有限|Inc|Ltd|Co\./i.test(t)) {
-        // 像「2019.07 - 2022.03 某公司 | 职位」这类行，记为组织信息
+        if (body.length >= 8) {
+          bullets.push({
+            text: body, from: key,
+            org: currentOrg,
+            entryId: currentEntry?.id || '',
+          });
+        }
+        continue;
+      }
+
+      // 不是列表行，且看着像「时间 + 公司 + 职位」→ 记为一个工作条目
+      if (t.length <= 60 && /\d{4}|公司|集团|科技|有限|Inc|Ltd|Co\./i.test(t)) {
         currentOrg = clean(t);
+        const parsed = parseOrgLine(t);
+        if (key === 'work' && parsed) {
+          currentEntry = { id: 'we' + (workEntries.length + 1), ...parsed };
+          workEntries.push(currentEntry);
+        }
       }
     }
   }
@@ -128,11 +148,67 @@ export function parseResume(raw) {
     years,
     sections,
     bullets,
+    workEntries,
     skillItems,
     summaryText,
     skillsText,
     rawText: text,
   };
+}
+
+/**
+ * 解析「2021.03 - 至今   某科技公司   前端负责人」这类行
+ * @returns {{period, org, role}|null}
+ */
+function parseOrgLine(line) {
+  const t = clean(line);
+  if (!t) return null;
+
+  // 时间区间：2021.03 - 至今 / 2019.06 - 2021.02 / 2019/06-2021/02
+  const m = t.match(
+    /((?:19|20)\d{2}\s*[.\-/年]?\s*\d{0,2}\s*月?)\s*[-–~至]{1,2}\s*((?:19|20)\d{2}\s*[.\-/年]?\s*\d{0,2}\s*月?|至今|现在|present|now)/i
+  );
+  if (!m) return null;
+
+  const period = clean(m[1]) + ' - ' + clean(m[2]);
+  let rest = t.replace(m[0], '').trim();
+  rest = rest.replace(/^[|｜·,，\s]+|[|｜·,，\s]+$/g, '');
+  if (!rest) return { period, org: '', role: '' };
+
+  const ROLE_RE = /工程师|负责人|开发|经理|主管|架构师|总监|专家|实习生|组长|lead|engineer|manager|developer/i;
+  const LEVEL_RE = /^(senior|junior|lead|staff|principal|mid|高级|资深|初级)/i;
+
+  let org = '';
+  let role = '';
+
+  // 先按显式分隔符拆（竖线、逗号、制表符）
+  const explicit = rest.split(/[|｜·,，\t]+/).map((x) => clean(x)).filter(Boolean);
+
+  if (explicit.length >= 2) {
+    for (const part of explicit) {
+      if (ROLE_RE.test(part)) { if (!role) role = part; }
+      else if (!org) org = part;
+    }
+  } else {
+    // 没有显式分隔符：clean() 已把多空格压成单空格，按词切分
+    const tokens = rest.split(/\s+/).filter(Boolean);
+    const roleIdx = tokens.findIndex((tk) => ROLE_RE.test(tk));
+
+    if (roleIdx > 0) {
+      // 职位可能带级别前缀（Senior Engineer）
+      let start = roleIdx;
+      if (roleIdx - 1 >= 1 && LEVEL_RE.test(tokens[roleIdx - 1])) start = roleIdx - 1;
+      org = tokens.slice(0, start).join(' ');
+      role = tokens.slice(start).join(' ');
+    } else if (roleIdx === 0) {
+      role = rest;
+    } else {
+      org = rest;
+    }
+  }
+
+  if (!org && !role) return null;
+  return { period, org: clean(org), role: clean(role) };
 }
 
 /**
@@ -206,10 +282,27 @@ export function buildProfileFromResume(parsed, template) {
       keywords: [...hitKeywords].slice(0, 10),
       text: t,
       source: 'resume',
+      from: 'other',
     });
   };
 
-  for (const b of parsed.bullets) pushHighlight(b.text);
+  // 要点 → highlight，带上归属的工作条目（用于生成简历时分组）
+  const entryById = new Map((parsed.workEntries || []).map((e) => [e.id, e]));
+  for (const b of parsed.bullets) {
+    const before = highlights.length;
+    pushHighlight(b.text);
+    if (highlights.length > before) {
+      const h = highlights[highlights.length - 1];
+      h.from = b.from;                       // work / project
+      const e = entryById.get(b.entryId);
+      if (e) {
+        h.org = e.org;
+        h.period = e.period;
+        h.role = e.role;
+        h.entryId = e.id;
+      }
+    }
+  }
   // 条目太少时，补充个人优势/技能里的长句
   if (highlights.length < 5) {
     if (parsed.summaryText) {
@@ -238,6 +331,7 @@ export function buildProfileFromResume(parsed, template) {
       years,
       currentCity: parsed.city || '',
       education: detectEducation(parsed.rawText),
+      educationLine: (parsed.sections.edu || []).find((l) => l.trim().length > 4) || '',
       intent: [],
     },
     grades: template.grades || { S: 88, A: 75, B: 58, C: 40 },
@@ -249,6 +343,7 @@ export function buildProfileFromResume(parsed, template) {
     resumeText: parsed.rawText.slice(0, 6000),
     meta: {
       source: 'imported-resume',
+      workEntries: parsed.workEntries || [],
       importedAt: new Date().toISOString(),
       bulletCount: parsed.bullets.length,
       highlightCount: highlights.length,
