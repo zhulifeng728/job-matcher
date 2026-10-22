@@ -39,6 +39,12 @@
 
 **要求**：Node.js 18+（零第三方依赖，不需要 `npm install`）
 
+> **为什么不用 UI 框架**：这个项目的核心优势是零依赖单文件部署
+> （`node src/server.js` 就能跑）。引 Element Plus / Ant Design 要么走 CDN
+> （离线失效、多 1MB），要么上构建链。
+> 所以下拉、开关、面板这些组件都是自己写的 —— 视觉和交互按框架标准
+> （WAI-ARIA、44px 触控、150-300ms 过渡、prefers-reduced-motion），但不引入依赖。
+
 ## 两个入口
 
 | 入口 | 场景 |
