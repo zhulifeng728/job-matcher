@@ -79,6 +79,17 @@
     }
     .ph .x:hover { background: #f1f5f9; color: #475569; }
 
+    /* 刷新按钮 */
+    .ph .rf {
+      border: none; background: transparent; cursor: pointer; color: #94a3b8;
+      width: 28px; height: 28px; padding: 4px; border-radius: 6px;
+      display: inline-flex; align-items: center; justify-content: center;
+      transition: background .15s, color .15s;
+    }
+    .ph .rf:hover { background: #eff6ff; color: #3669EC; }
+    .ph .rf:active svg { transform: rotate(-180deg); }
+    .ph .rf svg { width: 16px; height: 16px; transition: transform .25s ease; }
+
     .pb { padding: 16px 18px 18px; }
 
     /* 分数 */
@@ -226,6 +237,8 @@
     wrap.append(panel);
     panelOpen = true;
     panel.querySelector('.x')?.addEventListener('click', closePanel);
+    // 刷新：强制重新提取 + 重新分析（不依赖自动检测）
+    panel.querySelector('.rf')?.addEventListener('click', () => analyze({ force: true }));
     return panel;
   }
 
@@ -237,6 +250,7 @@
   function stateUI(html) {
     return `<div class="ph">
         <div class="logo">AI</div><div class="ttl">求职助手</div>
+        <button class="rf" title="重新获取这个岗位"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
         <button class="x" title="关闭">&times;</button>
       </div><div class="state">${html}</div>`;
   }
@@ -251,9 +265,13 @@
   async function analyze(options = {}) {
     if (analyzing) return;
     analyzing = true;
+    // 手动刷新时清掉指纹，确保一定重新算
+    if (options.force) lastFingerprint = null;
 
     const p = openPanel(stateUI('<div class="sp"></div>'
-      + (options.auto ? '岗位变了，正在重新分析…' : '正在识别这个页面的岗位描述…')));
+      + (options.force ? '正在重新获取这个岗位…'
+        : options.auto ? '岗位变了，正在重新分析…'
+          : '正在识别这个页面的岗位描述…')));
 
     // 1. 提取
     let jd;
@@ -298,6 +316,7 @@
       const needSetup = /令牌|登录|配置/.test(res?.error || '');
       p.querySelector('.ph').outerHTML = `
         <div class="ph"><div class="logo">AI</div><div class="ttl">求职助手</div>
+        <button class="rf" title="重新获取这个岗位"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
         <button class="x">&times;</button></div>`;
       p.querySelector('.x')?.addEventListener('click', closePanel);
       p.querySelector('.state').innerHTML = `
@@ -397,6 +416,7 @@
     p.innerHTML = `
       <div class="ph">
         <div class="logo">AI</div><div class="ttl">匹配分析</div>
+        <button class="rf" title="重新获取这个岗位"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></button>
         <button class="x" title="关闭">&times;</button>
       </div>
       <div class="pb">
