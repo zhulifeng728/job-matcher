@@ -66,6 +66,25 @@ async function check() {
   return false;
 }
 
+/**
+ * 确保扩展有权限访问这个服务器
+ *
+ * manifest 里写死了默认服务器 + localhost。用户换成别的地址时，
+ * 请求会被浏览器拦（没有对应 host permission），这里动态申请。
+ */
+async function ensureHostPermission(server) {
+  try {
+    const origin = new URL(server).origin + '/*';
+    const has = await chrome.permissions.contains({ origins: [origin] });
+    if (has) return true;
+
+    const granted = await chrome.permissions.request({ origins: [origin] });
+    return granted;
+  } catch (e) {
+    return false;
+  }
+}
+
 $('save').addEventListener('click', async () => {
   const server = normalizeServer($('server').value);
   const token = $('token').value.trim();
@@ -74,6 +93,14 @@ $('save').addEventListener('click', async () => {
   if (!token) return showMsg('err', '请填访问令牌');
 
   $('server').value = server;
+
+  // 换服务器时先申请权限，否则后续请求会被拦
+  const permitted = await ensureHostPermission(server);
+  if (!permitted) {
+    return showMsg('err', '浏览器没允许访问 ' + server
+      + '。刷新这个弹窗再点一次，或在 chrome://extensions 里检查站点权限。');
+  }
+
   await chrome.storage.local.set({ server, token });
 
   $('save').disabled = true;
@@ -93,6 +120,7 @@ $('test').addEventListener('click', async () => {
   const token = $('token').value.trim();
   if (!server || !token) return showMsg('err', '先把地址和令牌填上');
 
+  await ensureHostPermission(server);
   // 先暂存，让 background 用新值测试
   await chrome.storage.local.set({ server, token });
 

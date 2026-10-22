@@ -241,6 +241,33 @@ textarea { min-height:200px; line-height:1.7; resize:vertical; }
 .md-doc strong { font-weight:600; color:var(--ink); }
 .md-doc code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); padding:1px 5px; border-radius:4px; color:var(--brand-deep); }
 .md-doc hr { border:none; border-top:1px solid var(--line); margin:28px 0; }
+.step-hint { display:block; font-size:12.5px; color:var(--ink-3); line-height:1.7; margin-top:3px; font-weight:400; }
+.steps-ol li strong { font-size:14px; }
+.checklist { display:grid; gap:12px; margin-top:14px; }
+.check-item { display:flex; gap:12px; align-items:flex-start; }
+.ci-ic {
+  flex:none; width:22px; height:22px; border-radius:50%;
+  background:var(--brand-soft); color:var(--brand); font-size:12px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; margin-top:1px;
+}
+.ci-t { font-size:13.5px; font-weight:500; color:var(--ink); line-height:1.55; }
+.ci-d { font-size:12.5px; color:var(--ink-3); line-height:1.6; margin-top:2px; }
+.faq-item { border-bottom:1px solid var(--line); padding:0; }
+.faq-item:last-child { border-bottom:none; }
+.faq-item summary {
+  cursor:pointer; padding:13px 0; font-size:14px; font-weight:500; color:var(--ink);
+  list-style:none; display:flex; align-items:center; gap:8px;
+}
+.faq-item summary::-webkit-details-marker { display:none; }
+.faq-item summary::before {
+  content:'›'; font-size:17px; color:var(--ink-4); transition:transform .15s; display:inline-block;
+}
+.faq-item[open] summary::before { transform:rotate(90deg); }
+.faq-item > div { padding:0 0 14px 22px; font-size:13px; line-height:1.75; color:var(--ink-2); }
+.faq-item > div ol { margin:6px 0; padding-left:18px; }
+.faq-item > div li { margin-bottom:5px; }
+.faq-item > div p { margin:0 0 8px; }
+.faq-item code { font-family:var(--mono); font-size:12px; background:var(--bg-soft-2); padding:1px 5px; border-radius:4px; }
 .learn-card {
   border:1px solid var(--line); border-radius:var(--r-card); padding:16px 18px;
   margin-bottom:12px; background:#fff;
@@ -951,15 +978,120 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
       </div>
 
       <div class="card" style="margin-bottom:20px">
-        <h3 class="card-title">安装（3 步）</h3>
+        <h3 class="card-title">安装（4 步，约 1 分钟）</h3>
         <ol class="steps-ol">
-          <li><strong>解压</strong>下载的 zip 到一个你不会删的目录</li>
-          <li>Chrome 地址栏输入 <code>chrome://extensions</code>，打开右上角「开发者模式」</li>
-          <li>点「加载已解压的扩展程序」，选中解压出来的文件夹</li>
+          <li>
+            <strong>下载并解压</strong><br>
+            <span class="step-hint">下载上面的 zip，双击解压。得到一个 <code>jm-extension</code> 文件夹，
+            里面能看到 <code>manifest.json</code>。把这个文件夹放到一个你不会删的位置。</span>
+          </li>
+          <li>
+            <strong>打开扩展管理页</strong><br>
+            <span class="step-hint">
+              Chrome 地址栏输入 <code>chrome://extensions</code>（Edge 用 <code>edge://extensions</code>），
+              打开右上角「开发者模式」。
+            </span>
+          </li>
+          <li>
+            <strong>加载扩展</strong><br>
+            <span class="step-hint">点「加载已解压的扩展程序」，选中第 1 步解压出来的那个文件夹。</span>
+          </li>
+          <li>
+            <strong>连接你的账号</strong><br>
+            <span class="step-hint">点浏览器工具栏的扩展图标，填服务器地址和下面的令牌，点「保存并连接」。</span>
+          </li>
         </ol>
-        <div class="alert alert-info" style="margin-top:14px;margin-bottom:0">
-          扩展已上架前需要手动加载。装好后点工具栏的扩展图标，填入服务器地址和下面的令牌。
+
+        <div class="alert alert-info" style="margin-top:16px">
+          <b>为什么要手动加载</b>：上架 Chrome 应用商店需要开发者账号和审核，
+          目前没做。手动加载一样能用，只是换电脑要重装一次。
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <h3 class="card-title">装完自检</h3>
+        <p class="card-desc">按顺序确认这四项，有一项不对就看下面的排查。</p>
+        <div class="checklist">
+          <div class="check-item">
+            <span class="ci-ic">1</span>
+            <div>
+              <div class="ci-t">扩展列表里能看到它，且开关是开的</div>
+              <div class="ci-d">在 <code>chrome://extensions</code> 里找「AI 求职助手 · 岗位匹配」</div>
+            </div>
+          </div>
+          <div class="check-item">
+            <span class="ci-ic">2</span>
+            <div>
+              <div class="ci-t">工具栏能看到图标</div>
+              <div class="ci-d">看不到就点拼图图标，把这一项「固定」到工具栏</div>
+            </div>
+          </div>
+          <div class="check-item">
+            <span class="ci-ic">3</span>
+            <div>
+              <div class="ci-t">点图标弹窗里显示「已连接 · 你的名字」</div>
+              <div class="ci-d">如果显示「未连接」，检查服务器地址和令牌</div>
+            </div>
+          </div>
+          <div class="check-item">
+            <span class="ci-ic">4</span>
+            <div>
+              <div class="ci-t">打开任意岗位详情页，右下角出现蓝色按钮</div>
+              <div class="ci-d">按钮右下角有个小绿点表示账号已连上</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <h3 class="card-title">常见问题</h3>
+        <details class="faq-item">
+          <summary>右下角没有蓝色按钮</summary>
+          <div>
+            <p>按顺序排查：</p>
+            <ol>
+              <li>确认你打开的是<b>岗位详情页</b>，不是列表页或首页</li>
+              <li>刷新一下页面（扩展是在页面加载后注入的）</li>
+              <li>确认网址在支持列表里（BOSS / 智联 / 猎聘 / 拉勾 / 前程无忧 / LinkedIn / 牛客）</li>
+              <li>到 <code>chrome://extensions</code> 看这一项有没有报错，点「重新加载」</li>
+            </ol>
+            <p>如果是别的网站，按钮不会出现 —— 用网站上的「导入 JD」粘贴文字分析。</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>按钮出现了，但提示「扩展通信失败」</summary>
+          <div>
+            <p>一般是令牌不对或服务器连不上：</p>
+            <ol>
+              <li>点扩展图标，看状态是不是「已连接」</li>
+              <li>点「测试」按钮单独测连接</li>
+              <li>令牌可能被撤销了 —— 到下面重新生成一个</li>
+            </ol>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>提示「没识别到岗位描述」</summary>
+          <div>
+            <p>招聘网站改版会导致自动识别失败。用面板上的<b>「手动选择区域」</b>：
+            点了之后在页面上框选 JD 所在的区域，实时高亮预览，点一下确认。</p>
+            <p>这样即使网站大改版也能用。</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>换了服务器地址后连不上</summary>
+          <div>
+            <p>扩展需要「访问该网站」的权限。保存时浏览器会弹一个授权提示，点「允许」。
+            如果没弹，刷新一下扩展弹窗再点保存。</p>
+            <p>默认地址和本机地址已经预先授权，不用额外操作。</p>
+          </div>
+        </details>
+        <details class="faq-item">
+          <summary>换电脑 / 重装浏览器了</summary>
+          <div>
+            <p>重新走一遍安装步骤，令牌可以复用同一个（在下面列表里能看到，但不能再次显示明文）。
+            忘了就撤销旧的、生成新的。已导入的简历和岗位都在服务器上，不会丢。</p>
+          </div>
+        </details>
       </div>
 
       <div class="card">
