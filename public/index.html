@@ -241,6 +241,15 @@ textarea { min-height:200px; line-height:1.7; resize:vertical; }
 .md-doc strong { font-weight:600; color:var(--ink); }
 .md-doc code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); padding:1px 5px; border-radius:4px; color:var(--brand-deep); }
 .md-doc hr { border:none; border-top:1px solid var(--line); margin:28px 0; }
+.token-explain {
+  background:var(--bg-soft); border-radius:var(--r-card); padding:14px 16px; margin-bottom:16px;
+}
+.te-row { display:flex; gap:12px; font-size:13px; line-height:1.7; padding:4px 0; }
+.te-k { flex:none; width:88px; color:var(--ink-3); }
+.te-v { flex:1; color:var(--ink-2); }
+.te-v code { font-family:var(--mono); font-size:11.5px; background:#fff; padding:1px 5px; border-radius:4px; }
+.token-steps { padding:14px 16px; border:1px dashed var(--line-strong); border-radius:var(--r-card); }
+.ts-title { font-size:13px; font-weight:600; margin-bottom:8px; }
 .step-hint { display:block; font-size:12.5px; color:var(--ink-3); line-height:1.7; margin-top:3px; font-weight:400; }
 .steps-ol li strong { font-size:14px; }
 .checklist { display:grid; gap:12px; margin-top:14px; }
@@ -998,7 +1007,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
           </li>
           <li>
             <strong>连接你的账号</strong><br>
-            <span class="step-hint">点浏览器工具栏的扩展图标，填服务器地址和下面的令牌，点「保存并连接」。</span>
+            <span class="step-hint">点浏览器工具栏的扩展图标，填服务器地址和令牌。<b>令牌在下面「访问令牌」一节生成</b>，复制粘贴即可。</span>
           </li>
         </ol>
 
@@ -1006,6 +1015,65 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
           <b>为什么要手动加载</b>：上架 Chrome 应用商店需要开发者账号和审核，
           目前没做。手动加载一样能用，只是换电脑要重装一次。
         </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px" id="tokenCard">
+        <h3 class="card-title">访问令牌</h3>
+        <p class="card-desc" style="margin-bottom:14px">
+          扩展要单独一个凭据才能访问你的账号 —— 因为浏览器不会把网站的登录状态带给扩展。
+          这就是「访问令牌」。
+        </p>
+
+        <div class="token-explain">
+          <div class="te-row">
+            <span class="te-k">长什么样</span>
+            <span class="te-v"><code>jme_xxxxxxxxxxxxxxxxxxxxxxxxxxxx</code>，<code>jme_</code> 开头，36 位随机字符</span>
+          </div>
+          <div class="te-row">
+            <span class="te-k">干什么用</span>
+            <span class="te-v">扩展每次请求带上它，服务端就知道「这是哪个账号」</span>
+          </div>
+          <div class="te-row">
+            <span class="te-k">存在哪</span>
+            <span class="te-v">只在你浏览器本地（<code>chrome.storage</code>），不上传到别处</span>
+          </div>
+          <div class="te-row">
+            <span class="te-k">服务端存什么</span>
+            <span class="te-v">只存 SHA-256 哈希，存不了明文 —— 所以<b>只显示一次</b></span>
+          </div>
+          <div class="te-row">
+            <span class="te-k">有效期</span>
+            <span class="te-v">长期有效，随时可以撤销。撤销后扩展立刻失效</span>
+          </div>
+        </div>
+
+        <div class="token-steps">
+          <div class="ts-title">怎么拿（3 步）</div>
+          <ol class="steps-ol">
+            <li>点下面的 <b>「生成新令牌」</b>，随便起个名字（比如「我的 Chrome」）</li>
+            <li>生成后会显示一串 <code>jme_...</code>，点 <b>「复制令牌」</b></li>
+            <li>点浏览器工具栏的扩展图标，粘贴到「访问令牌」输入框，点「保存并连接」</li>
+          </ol>
+        </div>
+
+        <div class="field" style="margin-top:18px;margin-bottom:0">
+          <label class="field-label">扩展弹窗里要填的服务器地址</label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="text" id="serverAddr" readonly style="flex:1;background:var(--bg-soft-2)">
+            <button class="btn btn-sm" onclick="copyServerAddr()">复制</button>
+          </div>
+          <div style="font-size:12px;color:var(--ink-4);margin-top:6px">
+            就是你现在访问的这个地址。换到别的服务器部署时，改成那个地址。
+          </div>
+        </div>
+
+        <div class="toolbar" style="margin-top:20px">
+          <button class="btn btn-primary" id="btnNewToken">生成新令牌</button>
+          <span id="tokenStatus" style="font-size:13px;color:var(--ink-3)"></span>
+        </div>
+
+        <div id="newTokenBox" style="margin-top:16px" hidden></div>
+        <div id="tokenList" style="margin-top:18px"></div>
       </div>
 
       <div class="card" style="margin-bottom:20px">
@@ -1094,21 +1162,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         </details>
       </div>
 
-      <div class="card">
-        <h3 class="card-title">访问令牌</h3>
-        <p class="card-desc">
-          扩展用这个令牌识别你的账号。<strong>明文只在生成时显示一次</strong>，服务端只存哈希。
-          令牌只保存在你浏览器本地，不会上传到别处。
-        </p>
-
-        <div class="toolbar" style="margin-top:16px">
-          <button class="btn btn-primary" id="btnNewToken">生成新令牌</button>
-          <span id="tokenStatus" style="font-size:13px;color:var(--ink-3)"></span>
-        </div>
-
-        <div id="newTokenBox" style="margin-top:16px" hidden></div>
-        <div id="tokenList" style="margin-top:18px"></div>
-      </div>
+      
     </div>
   </section>
 
@@ -2457,6 +2511,19 @@ if ($('btnSeedStories')) $('btnSeedStories').addEventListener('click', async () 
    浏览器扩展 · 令牌管理
    ═══════════════════════════════════════════ */
 
+function fillServerAddr() {
+  const el = $('serverAddr');
+  if (el) el.value = location.origin;
+}
+
+function copyServerAddr() {
+  const v = $('serverAddr')?.value;
+  if (!v) return;
+  navigator.clipboard.writeText(v)
+    .then(() => { $('tokenStatus').textContent = '✓ 服务器地址已复制'; setTimeout(() => { $('tokenStatus').textContent = ''; }, 2500); })
+    .catch(() => alert('复制失败，请手动选中'));
+}
+
 async function loadTokens() {
   const box = $('tokenList');
   if (!box) return;
@@ -2518,7 +2585,7 @@ if ($('btnNewToken')) $('btnNewToken').addEventListener('click', async () => {
       + '<div class="token-box" id="newTokenValue">' + esc(d.token) + '</div>'
       + '<div class="toolbar" style="margin-top:12px">'
       + '<button class="btn btn-sm btn-primary" onclick="copyNewToken()">复制令牌</button>'
-      + '<span style="font-size:12.5px;color:var(--ink-4)">粘贴到扩展弹窗的「访问令牌」输入框</span></div>';
+      + '<span style="font-size:12.5px;color:var(--ink-4)">复制后到扩展弹窗粘贴，点「保存并连接」</span></div>';
     S.newToken = d.token;
     loadTokens();
   } catch (e) {
@@ -2921,7 +2988,7 @@ function switchView(name, param) {
   });
   if (name === 'settings') loadSettings();
   if (name === 'resume') loadResume();
-  if (name === 'extension') loadTokens();
+  if (name === 'extension') { fillServerAddr(); loadTokens(); }
   if (name === 'custom') loadVersions();
   if (name === 'insights') loadInsights();
 
