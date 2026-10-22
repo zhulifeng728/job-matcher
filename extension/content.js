@@ -457,7 +457,90 @@
     p.querySelector('.x')?.addEventListener('click', closePanel);
   }
 
-  fab.addEventListener('click', () => {
+  // ══════════ 悬浮按钮：可拖拽 ══════════
+  //
+  // 用户反馈圆形按钮挡住了页面内容（比如右侧的岗位列表边缘），
+  // 而且只能固定在右下角。做成可拖拽，位置记在 localStorage 里。
+
+  const POS_KEY = 'jm_fab_pos';
+  const FAB_SIZE = 54;
+
+  function clampPos(x, y) {
+    const maxX = window.innerWidth - FAB_SIZE - 6;
+    const maxY = window.innerHeight - FAB_SIZE - 6;
+    return {
+      x: Math.min(Math.max(6, x), Math.max(6, maxX)),
+      y: Math.min(Math.max(6, y), Math.max(6, maxY)),
+    };
+  }
+
+  function applyPos(pos) {
+    fab.style.right = 'auto';
+    fab.style.bottom = 'auto';
+    fab.style.left = pos.x + 'px';
+    fab.style.top = pos.y + 'px';
+  }
+
+  // 恢复上次位置
+  try {
+    const saved = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
+    if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+      applyPos(clampPos(saved.x, saved.y));
+    }
+  } catch { /* 忽略 */ }
+
+  let dragging = false;
+  let moved = false;
+  let startX = 0, startY = 0, origX = 0, origY = 0;
+
+  fab.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    dragging = true;
+    moved = false;
+    startX = e.clientX;
+    startY = e.clientY;
+    const r = fab.getBoundingClientRect();
+    origX = r.left;
+    origY = r.top;
+    fab.setPointerCapture?.(e.pointerId);
+    fab.style.cursor = 'grabbing';
+    e.preventDefault();
+  });
+
+  fab.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (!moved && Math.hypot(dx, dy) < 4) return;   // 抖动阈值，防误判拖拽
+    moved = true;
+    const pos = clampPos(origX + dx, origY + dy);
+    applyPos(pos);
+  });
+
+  const endDrag = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    fab.style.cursor = '';
+    try { fab.releasePointerCapture?.(e.pointerId); } catch { /* 忽略 */ }
+    if (moved) {
+      const r = fab.getBoundingClientRect();
+      const pos = clampPos(r.left, r.top);
+      applyPos(pos);
+      try { localStorage.setItem(POS_KEY, JSON.stringify(pos)); } catch { /* 忽略 */ }
+    }
+  };
+  fab.addEventListener('pointerup', endDrag);
+  fab.addEventListener('pointercancel', endDrag);
+
+  // 窗口尺寸变化时把按钮拉回可视区
+  window.addEventListener('resize', () => {
+    const r = fab.getBoundingClientRect();
+    if (fab.style.left) applyPos(clampPos(r.left, r.top));
+  });
+
+  fab.addEventListener('click', (e) => {
+    // 拖拽结束不应触发点击
+    if (moved) { moved = false; e.preventDefault(); e.stopPropagation(); return; }
     if (panelOpen) closePanel();
     else analyze();
   });

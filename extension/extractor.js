@@ -180,6 +180,7 @@ function fromSiteRules() {
     company: clean(pick(rule.company)?.innerText || ''),
     text,
     source: 'site-rule',
+    scopeEl: bodyEl,
   };
 }
 
@@ -207,6 +208,7 @@ function fromHeuristic() {
     '[class*="job-sec"]', '[class*="job_intro"]', '[class*="job-intro"]',
     '[class*="position-detail"]', '[class*="positionDetail"]', '[class*="position-content"]',
     '[class*="describ"]', '[class*="description"]', '[class*="desc-content"]',
+    '[class*="desc"]', '[class*="detail"]', '[class*="intro"]',
     '[class*="requirement"]', '[class*="duty"]', '[class*="responsibilit"]',
     '[class*="detail-content"]', '[class*="content-detail"]',
     'article', 'main', '[role="main"]',
@@ -226,18 +228,28 @@ function fromHeuristic() {
 
   if (!candidates.length) return null;
 
-  // 分数最高者胜出；同分取更短的（避免选到整个 body 包裹层）
-  candidates.sort((a, b) => (b.score - a.score) || (a.text.length - b.text.length));
-  const best = candidates[0];
+  // 选容器的策略：先看分数，再在「分数接近最高分」的候选里取最短的
+  //
+  // 为什么：智联这类「左列表 + 右详情」布局，外层容器分数可能最高
+  // （因为把详情的关键词都包进去了），但它同时包住了列表 —— 会污染
+  // 标题和公司识别。真正该选的是「差不多能覆盖 JD 的最小容器」。
+  candidates.sort((a, b) => b.score - a.score);
+  const topScore = candidates[0].score;
+  const near = candidates.filter((c) => c.score >= topScore * 0.85);
+  near.sort((a, b) => a.text.length - b.text.length);
+  const best = near[0];
 
   // 分数太低说明不像 JD
   if (best.score < 18) return null;
 
+  // scopeEl 必须带出去：主入口、公司名扫描都依赖它定位「正文所在区域」
+  const scopedTitle = guessTitle(best.el);
   return {
-    title: clean(guessTitle()),
-    company: clean(guessCompany(guessTitle())),
+    title: clean(scopedTitle),
+    company: clean(guessCompany(scopedTitle, best.el)),
     text: best.text,
     source: 'heuristic',
+    scopeEl: best.el,
   };
 }
 
@@ -246,11 +258,13 @@ function fromBody() {
   const main = document.querySelector('main, article, [role="main"]');
   const text = visibleText(main || document.body);
   if (text.length < 100) return null;
+  const t2 = guessTitle(main);
   return {
-    title: clean(guessTitle()),
-    company: clean(guessCompany(guessTitle())),
+    title: clean(t2),
+    company: clean(guessCompany(t2, main)),
     text: text.slice(0, 20000),
     source: 'body-fallback',
+    scopeEl: main || document.body,
   };
 }
 
@@ -295,8 +309,73 @@ function guessTitle(scopeEl) {
     }
   }
 
+  // 3. 关键兜底：在详情区里扫「像岗位名」的短文本
+  //    实测智联等站点的职位名没有稳定的 class，只能靠语义特征找
+  const scan = scanForJobTitle(scopeEl);
+  if (scan) return scan;
+
   const t2 = document.title.split(/[-|_·]/)[0].trim();
-  return t2.length <= 60 ? t2 : t2.slice(0, 60);
+  if (t2 && !/招聘|人才|求职|找工作|职位搜索/.test(t2) && t2.length <= 40) return t2;
+  return '';
+}
+
+/**
+ * 扫「像岗位名」的文本
+ *
+ * 判断依据（满足越多越可能是职位名）：
+ *   · 长度 4-30
+ *   · 含岗位词：工程师/开发/前端/后端/架构师/经理/负责人/专家/实习生/运营/产品/设计…
+ *   · 不含句子标点（，。；）和「薪资/要求/职责」这类标签
+ *   · 在页面上比较靠上（y 坐标小）
+ */
+function scanForJobTitle(scopeEl) {
+  const JOB_WORD = /(工程师|开发|前端|后端|全栈|架构师|技术负责人|负责人|经理|主管|总监|专家|实习生|设计师|产品经理|运营|测试|算法|数据|运维|Java|Python|Go|React|Vue|Node|PHP|C\+\+|Android|iOS|Web|AI)/i;
+  const BAD = /(薪资|要求|职责|福利|描述|地点|经验|学历|公司|地址|时间|发布|浏览|收藏|举报|立即|申请|投递|分享)/;
+
+  const root = scopeEl || document.body;
+  const nodes = root.querySelectorAll('h1,h2,h3,h4,span,div,a,strong,b');
+  const cands = [];
+  // 正文容器的位置：标题通常在它正上方不远处
+  let baseRect = null;
+  try { baseRect = (scopeEl || root).getBoundingClientRect(); } catch { /* 忽略 */ }
+
+  for (const el of nodes) {
+    // 只看叶子级文本，避免整块容器
+    if (el.children.length > 1) continue;
+    const txt = clean(el.innerText || el.textContent || '');
+    if (txt.length < 4 || txt.length > 30) continue;
+    if (BAD.test(txt)) continue;
+    if (/[，。；！？,;!?]/.test(txt)) continue;
+    if (!JOB_WORD.test(txt)) continue;
+    // 纯标签词不算
+    if (/^(前端|后端|Java|Vue|React|Node\.?js)$/i.test(txt)) continue;
+
+    const r = el.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) continue;
+    // 打点：越靠上越可能是标题；字号大的加分
+    const fs = parseFloat(getComputedStyle(el).fontSize) || 14;
+    const fw = parseInt(getComputedStyle(el).fontWeight, 10) || 400;
+
+    // 三条判据：字号大 / 字重粗 / 离正文容器近
+    // 字号不是唯一依据（有些站详情标题和列表一样大），距离更稳
+    let dist = 0;
+    if (baseRect) {
+      const dy = Math.abs(r.top - baseRect.top);
+      const dx = Math.abs(r.left - baseRect.left);
+      dist = dy + dx;
+    }
+    const nearScore = !baseRect ? 0 : dist < 200 ? 8 : dist < 500 ? 5 : dist < 900 ? 2 : -3;
+
+    const score = (fs >= 20 ? 10 : fs >= 17 ? 7 : fs >= 15 ? 3 : 0)
+      + (fw >= 600 ? 3 : 0)
+      + nearScore
+      + (JOB_WORD.test(txt) ? 2 : 0);
+    cands.push({ txt, score, top: r.top, fs, dist });
+  }
+
+  if (!cands.length) return '';
+  cands.sort((a, b) => (b.score - a.score) || (a.top - b.top));
+  return cands[0].txt;
 }
 
 /**
@@ -369,21 +448,59 @@ function guessCompany(jobTitle, scopeEl) {
   const m1 = body.match(/(?:公司名称|公司|企业名称|招聘企业)\s*[:：]\s*([^\s，,。；;\n]{2,30})/);
   if (m1 && !bad(m1[1])) return strip(m1[1]);
 
+  // 2.5 容器附近扫「像公司名」的短文本（带 公司/科技/集团/有限/股份 等字）
+  const CO_SUFFIX = /(有限公司|股份有限公司|有限责任公司|科技|集团|网络|信息|软件|技术|实业|控股|bank|inc|ltd|co\.|corp)/i;
+  const scopes2 = [];
+  if (scopeEl) {
+    let node = scopeEl;
+    for (let i = 0; i < 5 && node; i++) { scopes2.push(node); node = node.parentElement; }
+  }
+  for (const scope of scopes2) {
+    for (const el of scope.querySelectorAll('span,div,a,p,strong,b,h1,h2,h3')) {
+      if (el.children.length > 1) continue;
+      const txt = strip(el.innerText || '');
+      if (txt.length < 4 || txt.length > 30) continue;
+      if (!CO_SUFFIX.test(txt)) continue;
+      if (/[，。；,;]/.test(txt)) continue;
+      if (bad(txt)) continue;
+      // 排除「20-99人 · 软件/IT服务」这类规模描述、纯数字、含「人 ·」的
+      if (/(\d+\s*[-~]\s*\d+\s*人|人\s*[·|]|^[\d\s.·-]+$)/.test(txt)) continue;
+      if (/^(招聘|职位|岗位|详情|首页|公司|规模|行业)/.test(txt)) continue;
+      // 至少要有 公司/集团/有限 之一，或有 科技/网络/信息/软件 + 长度>=6
+      const strong = /(有限公司|股份|集团|有限责任公司)/.test(txt);
+      const weak = /(科技|网络|信息|软件|技术|实业|控股)/.test(txt) && txt.length >= 6;
+      if (!strong && !weak) continue;
+      return txt;
+    }
+  }
+
   // 3. og:site_name
   const og = document.querySelector('meta[property="og:site_name"]')?.content;
   if (!bad(og)) return strip(og);
 
-  // 4. 标题里的「XX招聘」
+  // 4. 标题里的「XX招聘」—— 只在不像「城市+职位」时采用
+  //    实测「北京前端开发招聘」会被抠成「北京前端开发」，不是公司名
   const m2 = document.title.match(/^(.{2,20}?)招聘/);
-  if (m2 && !bad(m2[1])) return strip(m2[1]);
+  if (m2) {
+    const c = strip(m2[1]);
+    const looksLikePlace = /^(北京|上海|广州|深圳|杭州|成都|武汉|南京|西安|苏州|天津|重庆|长沙|郑州|青岛|厦门|福州|济南|合肥|宁波|东莞|佛山|珠海|无锡|大连|沈阳)/.test(c)
+      || /(前端|后端|开发|工程师|产品|运营|设计|测试|算法|数据|销售|客服)/.test(c);
+    if (!looksLikePlace && !bad(c)) return c;
+  }
 
   // 5. 域名反推：careers.n-ix.com → n-ix
-  const host = location.hostname.replace(/^(www|m|careers|jobs|job|talent|hr|zhaopin|recruit)\./i, '');
-  const parts = host.split('.');
-  const KNOWN_SITES = /zhipin|zhaopin|liepin|lagou|51job|linkedin|nowcoder|bosszhipin|maimai|kanzhun/i;
-  if (parts.length >= 2 && !KNOWN_SITES.test(host)) {
-    const name = parts[0];
-    if (name.length >= 2 && name.length <= 24) return name;
+  //    排除 IP、localhost、以及已知招聘站
+  const rawHost = location.hostname;
+  const isIp = /^\d{1,3}(\.\d{1,3}){3}$/.test(rawHost);
+  const isLocal = /^(localhost|127\.|0\.0\.0\.0|\[::1\])/i.test(rawHost);
+  if (!isIp && !isLocal) {
+    const host = rawHost.replace(/^(www|m|careers|jobs|job|talent|hr|zhaopin|recruit)\./i, '');
+    const parts = host.split('.');
+    const KNOWN_SITES = /zhipin|zhaopin|liepin|lagou|51job|linkedin|nowcoder|bosszhipin|maimai|kanzhun/i;
+    if (parts.length >= 2 && !KNOWN_SITES.test(host)) {
+      const name = parts[0];
+      if (name.length >= 2 && name.length <= 24 && /[a-z\u4e00-\u9fa5]/i.test(name)) return name;
+    }
   }
 
   return '';

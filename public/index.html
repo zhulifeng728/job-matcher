@@ -349,6 +349,13 @@ dialog.jm-dialog[open] { animation: jdIn .18s cubic-bezier(.2,.8,.3,1); }
 .jd-msg { font-size: 14px; line-height: 1.7; color: var(--ink-2); margin-bottom: 22px; }
 .jd-actions { display: flex; gap: 8px; justify-content: flex-end; }
 .jd-actions .btn { min-width: 80px; }
+.copy-area {
+  width: 100%; box-sizing: border-box; padding: 10px 12px;
+  border: 1px solid var(--line-strong); border-radius: var(--r-ctl);
+  font-family: var(--mono); font-size: 12.5px; line-height: 1.6;
+  color: var(--ink); background: var(--bg-soft); resize: vertical;
+}
+.copy-area:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(54,105,236,.12); }
 
 .sel {
   position: relative; display: inline-flex; align-items: center;
@@ -1133,7 +1140,18 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         <p>在招聘网站看岗位时，右下角一键算匹配度，不用复制粘贴。</p>
       </div>
 
-      <div class="card" style="margin-bottom:20px" id="tokenCard">
+      
+      <div class="card" style="margin-bottom:20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+        <div style="width:56px;height:56px;border-radius:16px;flex:none;
+          background:linear-gradient(135deg,#5B8DEF,#3669EC);display:grid;place-items:center;
+          color:#fff;font-weight:700;font-size:19px;box-shadow:0 8px 20px rgba(54,105,236,.28)">AI</div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:15px;font-weight:600;margin-bottom:3px">AI 求职助手 · Chrome 扩展</div>
+          <div style="font-size:12.5px;color:var(--ink-3)">v1.1.0 · 57 KB · 在招聘网站右下角一键算匹配度</div>
+        </div>
+        <a class="btn btn-primary" href="download/job-matcher-extension.zip" download>下载扩展</a>
+      </div>
+<div class="card" style="margin-bottom:20px" id="tokenCard">
         <h3 class="card-title">访问令牌</h3>
         <p class="card-desc" style="margin-bottom:14px">
           扩展要单独一个凭据才能访问你的账号 —— 因为浏览器不会把网站的登录状态带给扩展。
@@ -1330,8 +1348,6 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
               background:linear-gradient(135deg,#5B8DEF,#3669EC);display:flex;align-items:center;
               justify-content:center;color:#fff;font-weight:700;font-size:24px;
               box-shadow:0 8px 24px rgba(54,105,236,.3)">AI</div>
-            <a class="btn btn-primary" href="download/job-matcher-extension.zip" download
-               style="display:block">下载扩展</a>
             <div style="font-size:11.5px;color:var(--ink-4);margin-top:8px">v1.0.0 · 46 KB</div>
           </div>
         </div>
@@ -2731,15 +2747,26 @@ async function loadTokens() {
       const used = tk.lastUsedAt
         ? new Date(tk.lastUsedAt).toLocaleString('zh-CN', { hour12: false }).slice(0, 16)
         : '从未使用';
+      const canCopy = Boolean(tokenPlaintext(tk.id));
       return '<div class="token-item">'
         + '<div style="flex:1;min-width:0">'
         + '<div style="font-size:14px;font-weight:500">' + esc(tk.name) + '</div>'
         + '<div style="font-size:12px;color:var(--ink-4);margin-top:3px">'
         + '<code>' + esc(tk.hint) + '…</code>　创建于 ' + esc(created) + '　最后使用 ' + esc(used) + '</div>'
         + '</div>'
+        + (canCopy
+          ? '<button class="btn btn-sm" data-copy-token="' + esc(tk.id) + '">复制</button>'
+          : '<span style="font-size:11.5px;color:var(--ink-4)" title="明文只存在生成它的那台浏览器">明文不可用</span>')
         + '<button class="btn btn-sm btn-danger" data-revoke="' + esc(tk.id) + '">撤销</button>'
         + '</div>';
-    }).join('');
+    }).join('')
+      + '<div style="font-size:12px;color:var(--ink-4);margin-top:10px;line-height:1.7">'
+      + '「复制」只对<b>在这台浏览器里生成</b>的令牌可用 —— 服务器只存哈希，'
+      + '拿不回明文。换了浏览器就撤销旧的、重新生成一个。</div>';
+
+    box.querySelectorAll('[data-copy-token]').forEach((btn) => {
+      btn.addEventListener('click', () => copyNewToken(btn.dataset.copyToken));
+    });
 
     box.querySelectorAll('[data-revoke]').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -2789,9 +2816,11 @@ if ($('btnNewToken')) $('btnNewToken').addEventListener('click', () => {
     try {
       const d = await api('/api/tokens', { method: 'POST', body: { name } });
       S.newToken = d.token;
+      if (d.record?.id) cacheToken(d.record.id, d.token);   // 本机缓存，之后还能再复制
 
       box.innerHTML = '<div class="alert alert-warn" style="margin-bottom:12px">'
-        + '<strong>这个令牌只显示一次</strong>，关掉或刷新页面就再也看不到了。现在复制填到扩展里。</div>'
+        + '<strong>令牌明文只存在这台浏览器里</strong>，服务器只存哈希。'
+        + '换浏览器或清缓存后就复制不了了（那时撤销旧的、生成新的即可）。</div>'
         + '<div class="token-box" id="newTokenValue">' + esc(d.token) + '</div>'
         + '<div class="toolbar" style="margin-top:12px">'
         + '<button class="btn btn-sm btn-primary" onclick="copyNewToken()">复制令牌</button>'
@@ -2810,15 +2839,43 @@ if ($('btnNewToken')) $('btnNewToken').addEventListener('click', () => {
   nameEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') create(); });
 });
 
-async function copyNewToken() {
-  if (!S.newToken) return;
-  try {
-    await navigator.clipboard.writeText(S.newToken);
+async function copyNewToken(id) {
+  // id 省略时复制刚生成的那个
+  const raw = id ? tokenPlaintext(id) : S.newToken;
+  if (!raw) return;
+  const ok2 = await copyText(raw);
+  if (ok2) {
     $('tokenStatus').textContent = '✓ 已复制到剪贴板';
     setTimeout(() => { $('tokenStatus').textContent = ''; }, 2500);
-  } catch {
-    toastErr('复制失败，请手动选中复制');
   }
+}
+
+/**
+ * 令牌明文的本机缓存
+ *
+ * 服务端只存哈希，刷新页面后明文就没了 ——
+ * 用户反馈「下一次没有复制的模块」，就是这个原因。
+ * 把明文存到本机 localStorage（key 带用户 id），
+ * 这样列表里可以再复制。仅存在生成它的这台浏览器上，
+ * 清缓存/换设备就没了，符合「只显示一次」的安全初衷。
+ */
+const TOKEN_CACHE_KEY = 'jm_token_plain';
+
+function tokenCache() {
+  try { return JSON.parse(localStorage.getItem(TOKEN_CACHE_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function tokenPlaintext(id) {
+  return tokenCache()[id] || '';
+}
+
+function cacheToken(id, raw) {
+  try {
+    const c = tokenCache();
+    c[id] = raw;
+    localStorage.setItem(TOKEN_CACHE_KEY, JSON.stringify(c));
+  } catch { /* 隐私模式等，忽略 */ }
 }
 
 /* ═══════════════════════════════════════════
@@ -3148,6 +3205,62 @@ async function loadSettings() {
    现在用 Oat（本地 vendored，42KB，零依赖）的 toast + dialog。
    Oat 的 CSS 全在 @layer 内，我们的样式优先，不会打架。
    ═══════════════════════════════════════════ */
+
+/**
+ * 复制文本（可靠版）
+ *
+ * 为什么需要兜底：navigator.clipboard 只在安全上下文可用
+ * （https 或 localhost）。我们用 IP 直连 http 访问，
+ * 这个 API 根本不存在 —— 之前用户「每次都复制失败」就是这个原因。
+ * 兜底走 textarea + document.execCommand('copy')，http 下可用。
+ */
+async function copyText(text) {
+  const s = String(text ?? '');
+  if (!s) return false;
+
+  // 1. 标准 API（安全上下文才有效）
+  if (navigator.clipboard && window.isSecureContext) {
+    try { await navigator.clipboard.writeText(s); return true; } catch { /* 继续 */ }
+  }
+
+  // 2. execCommand 兜底
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = s;
+    ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, s.length);
+    const ok2 = document.execCommand('copy');
+    document.body.removeChild(ta);
+    if (ok2) return true;
+  } catch { /* 继续 */ }
+
+  // 3. 最后兜底：弹框让用户手动复制
+  showCopyDialog(s);
+  return false;
+}
+
+/** 复制失败时的手动复制框（内容可选中） */
+function showCopyDialog(text) {
+  const dlg = document.createElement('dialog');
+  dlg.className = 'jm-dialog';
+  dlg.innerHTML = '<div class="jd-body">'
+    + '<div class="jd-title">手动复制</div>'
+    + '<div class="jd-msg">浏览器拒绝了自动复制。下面这段可以直接选中复制：</div>'
+    + '<textarea readonly class="copy-area" rows="4">' + esc(text) + '</textarea>'
+    + '<div class="jd-actions" style="margin-top:14px">'
+    + '<button value="close" class="btn btn-primary">关闭</button></div></div>';
+  document.body.appendChild(dlg);
+  const close = () => { dlg.close(); dlg.remove(); };
+  dlg.querySelector('button').addEventListener('click', close);
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) close(); });
+  dlg.showModal();
+  const ta = dlg.querySelector('textarea');
+  ta.focus();
+  ta.select();
+}
 
 /** 轻提示。kind: success | error | info */
 function toast(message, kind = 'info', title) {
