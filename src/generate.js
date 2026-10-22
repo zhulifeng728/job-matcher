@@ -203,11 +203,22 @@ export function generateResume(profile, job, tailored) {
   const placed = placeKeywords(jdKeywords.all.slice(0, 40), profile);
 
   const owned = placed.filter((k) => k.owned);
-  const missing = jdKeywords.mustHave.filter((k) => !placed.find((x) => x.term === k.term && x.owned));
+
+  // 用户已确认「学会了」的技能，不再算缺口
+  const learnedSet = new Set(
+    (profile.skillsExtra || []).map((s) => String(s.term || s).toLowerCase())
+  );
+
+  const missing = jdKeywords.mustHave.filter((k) => {
+    if (learnedSet.has(k.term.toLowerCase())) return false;
+    return !placed.find((x) => x.term === k.term && x.owned);
+  });
 
   // ── 覆盖率：must-have 里有多少是真的有的 ──
   const mh = jdKeywords.mustHave;
-  const mhOwned = mh.filter((k) => placed.find((x) => x.term === k.term && x.owned));
+  const mhOwned = mh.filter((k) =>
+    learnedSet.has(k.term.toLowerCase()) || placed.find((x) => x.term === k.term && x.owned)
+  );
   const coverage = mh.length ? Math.round((mhOwned.length / mh.length) * 100) : 0;
 
   // ── 选要点：按与 JD 的相关度排序 ──
@@ -297,7 +308,8 @@ export function generateResume(profile, job, tailored) {
       inSkills: Boolean(x.claimedInSkills),
       inExperience: Boolean(x.proofCount),
       proofCount: x.proofCount || 0,
-      owned: Boolean(x.owned),
+      owned: Boolean(x.owned) || learnedSet.has(k.term.toLowerCase()),
+      learned: learnedSet.has(k.term.toLowerCase()),
     };
   });
 
@@ -378,6 +390,12 @@ function groupSkills(owned, jdKeywords, profile) {
     return resumeText.includes(lower);
   });
 
+  // 用户自己确认「学会了」的技能（从学习计划里加进来的）
+  for (const s of profile.skillsExtra || []) {
+    const term = String(s.term || s).trim();
+    if (term) push(classifyExtra(term), term);
+  }
+
   for (const term of extraTech) push('tool', term);
 
   // 方法/领域类也从简历里补
@@ -441,6 +459,15 @@ function rankBullets(profile, job, tailored, ownedKeywords) {
  * 组内要点按与 JD 的相关度排序。
  * 没有条目信息时退化成平铺列表，不编造公司名。
  */
+/** 判断用户新增技能属于哪一类（用于技能分组） */
+function classifyExtra(term) {
+  const lower = String(term).toLowerCase();
+  if (TECH_TERMS.some((x) => x.toLowerCase() === lower)) return 'tool';
+  if (METHOD_TERMS.some((x) => x.toLowerCase() === lower)) return 'method';
+  if (DOMAIN_TERMS.some((x) => x.toLowerCase() === lower)) return 'domain';
+  return 'tool';
+}
+
 function renderExperience(profile, bullets) {
   const out = [];
   const entries = profile.meta?.workEntries || [];

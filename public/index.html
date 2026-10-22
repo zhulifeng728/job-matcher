@@ -241,6 +241,23 @@ textarea { min-height:200px; line-height:1.7; resize:vertical; }
 .md-doc strong { font-weight:600; color:var(--ink); }
 .md-doc code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); padding:1px 5px; border-radius:4px; color:var(--brand-deep); }
 .md-doc hr { border:none; border-top:1px solid var(--line); margin:28px 0; }
+.learn-card {
+  border:1px solid var(--line); border-radius:var(--r-card); padding:16px 18px;
+  margin-bottom:12px; background:#fff;
+}
+.learn-card:last-child { margin-bottom:0; }
+.learn-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+.learn-term { font-size:15px; font-weight:600; }
+.learn-what { font-size:13.5px; color:var(--ink-2); line-height:1.7; margin-bottom:12px; }
+.learn-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+@media (max-width:720px) { .learn-grid { grid-template-columns:1fr; } }
+.learn-lab { font-size:11.5px; font-weight:600; color:var(--ink-3); letter-spacing:.03em; margin-bottom:6px; }
+.learn-ol, .learn-ul { margin:0; padding-left:18px; font-size:13px; line-height:1.7; color:var(--ink-2); }
+.learn-ol li, .learn-ul li { margin-bottom:4px; }
+.learn-honest {
+  margin-top:12px; padding:10px 14px; background:var(--bg-soft);
+  border-radius:var(--r-ctl); font-size:12.5px; line-height:1.7; color:var(--ink-2);
+}
 .funnel { display:flex; gap:10px; flex-wrap:wrap; }
 .funnel-cell {
   flex:1; min-width:120px; background:var(--bg-soft); border-radius:var(--r-card);
@@ -1013,7 +1030,7 @@ const S = {
   exportText: '', exportFormat: 'md',
   optJob: null, prepJob: null,
   resumeCache: {}, prepCache: {},
-  user: null, hasResume: false, prepDocText: '', newToken: '', lastResume: null,
+  user: null, hasResume: false, prepDocText: '', newToken: '', lastResume: null, learnedSkills: [],
 };
 
 const $ = (id) => document.getElementById(id);
@@ -1846,14 +1863,6 @@ function renderResumeResult(d) {
     + '<span><b>' + esc(i.term) + '</b> — ' + esc(i.msg)
     + (i.sections?.length ? '（出现在 ' + i.sections.join('、') + '）' : '') + '</span></div>').join('');
 
-  const gaps = (d.gaps || []).length
-    ? '<div class="alert alert-warn" style="margin-top:14px">'
-      + '<b>JD 要求但你没有证据的关键词（' + d.gaps.length + ' 个）：</b>'
-      + d.gaps.map((g) => esc(g.term)).join('、')
-      + '<br><span style="font-size:12.5px">这些没有写进简历 —— 不能编造。'
-      + '如果确实会，先在「我的简历」里补上真实经历，再重新生成。</span></div>'
-    : '';
-
   box.innerHTML = '<div class="card" style="margin-top:20px">'
     + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">'
     + '<h3 class="card-title" style="margin:0;flex:1">定制简历</h3>'
@@ -1880,12 +1889,22 @@ function renderResumeResult(d) {
     + 'letter-spacing:.04em;margin:0 0 10px">ATS 检查</div>'
     + checks
     + (issues ? '<div style="height:8px"></div>' + issues : '')
-    + gaps
+
+    + renderLearningBlock(d)
 
     + '<div class="sec-t" style="font-size:11.5px;font-weight:600;color:var(--ink-3);'
     + 'letter-spacing:.04em;margin:22px 0 10px">简历预览</div>'
     + '<div class="resume-preview" id="resumePreview">' + renderMdClient(d.markdown) + '</div>'
     + '</div>';
+
+  // 学习区块的按钮（用事件委托，因为每次重渲染）
+  const box2 = $('resumeBox');
+  box2.querySelectorAll('[data-learn]').forEach((b) => {
+    b.addEventListener('click', () => markLearned(b.dataset.learn));
+  });
+  box2.querySelectorAll('[data-rm-skill]').forEach((b) => {
+    b.addEventListener('click', () => removeLearnedSkill(b.dataset.rmSkill));
+  });
 
   loadVersions();
 }
@@ -1997,6 +2016,106 @@ async function viewVersion(id) {
     w.document.close();
   } catch (e) {
     alert('加载失败：' + e.message);
+  }
+}
+
+/**
+ * 技能缺口与学习路径
+ *
+ * 不是底部一句「不能编造」—— 用户看完不知道干什么。
+ * 每个缺口给出：是什么 / 怎么学 / 学会标准 / 没实践怎么说 / 多久
+ * 学完点「我已学会」才进入简历技能区（不替用户撒谎，但给他路径）
+ */
+function renderLearningBlock(d) {
+  const plan = d.learningPlan || [];
+  const sum = d.planSummary || {};
+  const learned = S.learnedSkills || [];
+
+  const learnedChips = learned.length
+    ? '<div style="margin-top:12px"><div style="font-size:12px;color:var(--ink-3);margin-bottom:6px">'
+      + '已加入简历的技能</div><div>'
+      + learned.map((s) => {
+        const term = typeof s === 'string' ? s : s.term;
+        return '<span class="kw-chip ok">' + esc(term)
+          + ' <button data-rm-skill="' + esc(term) + '" title="移除" '
+          + 'style="border:none;background:none;color:#15803d;cursor:pointer;padding:0 2px;font-size:13px">×</button></span>';
+      }).join('')
+      + '</div></div>'
+    : '';
+
+  if (!plan.length) {
+    return '<div class="card" style="margin-top:18px;background:var(--bg-soft)">'
+      + '<div style="display:flex;align-items:center;gap:10px">'
+      + '<span style="font-size:20px">✅</span>'
+      + '<div><div style="font-size:14px;font-weight:600">技能没有缺口</div>'
+      + '<div style="font-size:12.5px;color:var(--ink-3)">这个岗位要求的技术，你简历里都有对应证据。</div>'
+      + '</div></div>' + learnedChips + '</div>';
+  }
+
+  const cards = plan.map((p) => {
+    const isLearned = learned.some((s) => (typeof s === 'string' ? s : s.term).toLowerCase() === p.term.toLowerCase());
+    return '<div class="learn-card">'
+      + '<div class="learn-head">'
+      + '<span class="learn-term">' + esc(p.term) + '</span>'
+      + '<span class="tag">' + esc(p.category) + '</span>'
+      + '<span class="tag">约 ' + p.hours + ' 小时</span>'
+      + (p.detailed ? '<span class="tag tag-brand">有详细路径</span>' : '')
+      + '<span style="flex:1"></span>'
+      + (isLearned
+        ? '<span class="kw-chip ok">已加入简历</span>'
+        : '<button class="btn btn-sm btn-primary" data-learn="' + esc(p.term) + '">我已学会，加入简历</button>')
+      + '</div>'
+      + '<div class="learn-what">' + esc(p.what) + '</div>'
+      + '<div class="learn-grid">'
+      + '<div><div class="learn-lab">怎么学</div><ol class="learn-ol">'
+      + p.steps.map((s) => '<li>' + esc(s) + '</li>').join('')
+      + '</ol></div>'
+      + '<div><div class="learn-lab">学会的标准（能答上来）</div><ul class="learn-ul">'
+      + p.check.map((c) => '<li>' + esc(c) + '</li>').join('')
+      + '</ul></div>'
+      + '</div>'
+      + '<div class="learn-honest"><b>没实践过怎么说：</b>' + esc(p.honest) + '</div>'
+      + '</div>';
+  }).join('');
+
+  return '<div class="card" style="margin-top:18px;border:1px solid rgba(54,105,236,.25)">'
+    + '<div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:6px">'
+    + '<div style="flex:1;min-width:220px">'
+    + '<h3 class="card-title" style="margin:0 0 4px">技能缺口 · 学习路径</h3>'
+    + '<p class="card-desc" style="margin:0">这 '
+    + plan.length + ' 项 JD 要求、你简历里还没有证据。<b>没写进简历</b> —— '
+    + '学完点「我已学会」，它会进入技能区。</p></div>'
+    + '<div style="text-align:right">'
+    + '<div style="font-size:20px;font-weight:700;color:var(--brand)">' + (sum.totalHours || 0) + ' 小时</div>'
+    + '<div style="font-size:11.5px;color:var(--ink-4)">约 ' + (sum.days || 0) + ' 天（每天 3 小时）</div>'
+    + '</div></div>'
+    + '<div class="alert alert-info" style="margin:14px 0">' + esc(sum.note || '') + '</div>'
+    + cards
+    + learnedChips
+    + '</div>';
+}
+
+/** 学会一个技能 → 加入简历技能区 */
+async function markLearned(term) {
+  try {
+    await api('/api/resume/skills', { method: 'POST', body: { term } });
+    S.learnedSkills = (S.learnedSkills || []).concat([{ term }]);
+    // 重新生成，让新技能进入简历
+    if (S.currentJob) await generateResumeFor(S.currentJob.id);
+  } catch (e) {
+    alert('加入失败：' + e.message);
+  }
+}
+
+async function removeLearnedSkill(term) {
+  try {
+    await api('/api/resume/skills/' + encodeURIComponent(term), { method: 'DELETE' });
+    S.learnedSkills = (S.learnedSkills || []).filter(
+      (s) => (typeof s === 'string' ? s : s.term) !== term
+    );
+    if (S.currentJob) await generateResumeFor(S.currentJob.id);
+  } catch (e) {
+    alert('移除失败：' + e.message);
   }
 }
 
@@ -2345,6 +2464,7 @@ async function openDetail(id) {
     S.currentJob = job;
     renderDetail(job);
     loadStrategy(job.id);
+    api('/api/resume/skills').then((r) => { S.learnedSkills = r.skills || []; }).catch(() => {});
     $('resumeBox').innerHTML = '<div class="card" style="margin-top:20px">'
       + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
       + '<div style="flex:1;min-width:200px">'

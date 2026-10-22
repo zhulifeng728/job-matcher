@@ -34,6 +34,7 @@ import { renderMarkdown } from './markdown.js';
 import { buildStrategy } from './level.js';
 import { calibrate, analyzeOutcomes, currentWeightOf } from './calibrate.js';
 import { extractKeywords, generateResume, renderPrintableHTML } from './generate.js';
+import { buildLearningPlan, summarizePlan } from './learn.js';
 import {
   addVersion, loadVersions, getVersion, selectVersion, deleteVersion, publicVersion,
 } from './versions.js';
@@ -698,6 +699,55 @@ const routes = {
     };
   },
 
+  // ─────────── 我学会的技能 ───────────
+
+  /** 列出用户已确认学会的技能 */
+  'GET /api/resume/skills': async () => {
+    const profile = loadProfile();
+    if (!profile) return { error: '还没有导入简历', status: 400 };
+    return { skills: profile.skillsExtra || [] };
+  },
+
+  /** 学会一个新技能（用户自己确认），会进入后续生成的简历技能区 */
+  'POST /api/resume/skills': async (q, p, body) => {
+    const profile = loadProfile();
+    if (!profile) return { error: '还没有导入简历', status: 400 };
+
+    const term = str(body.term, 40).trim();
+    if (!term) return { error: '技能名不能为空', status: 400 };
+
+    profile.skillsExtra = profile.skillsExtra || [];
+    if (profile.skillsExtra.some((x) => String(x.term || x).toLowerCase() === term.toLowerCase())) {
+      return { ok: true, duplicated: true, skills: profile.skillsExtra };
+    }
+
+    profile.skillsExtra.push({
+      term,
+      addedAt: new Date().toISOString(),
+      // 用户自己声明的，标记来源，便于区分「简历原文里的」和「后来学的」
+      source: str(body.source, 20) || 'learned',
+    });
+    saveProfile(profile);
+
+    return { ok: true, skills: profile.skillsExtra };
+  },
+
+  /** 移除一个新增技能 */
+  'DELETE /api/resume/skills/:term': async (q, params) => {
+    const profile = loadProfile();
+    if (!profile) return { error: '还没有导入简历', status: 400 };
+
+    const term = decodeURIComponent(params.term || '').toLowerCase();
+    const before = (profile.skillsExtra || []).length;
+    profile.skillsExtra = (profile.skillsExtra || []).filter(
+      (x) => String(x.term || x).toLowerCase() !== term
+    );
+    if (profile.skillsExtra.length === before) return { error: '没有这个技能', status: 404 };
+
+    saveProfile(profile);
+    return { ok: true, skills: profile.skillsExtra };
+  },
+
   // ─────────── 洞察与权重校准 ───────────
 
   /** 投递漏斗 + 权重校准分析 */
@@ -808,6 +858,10 @@ const routes = {
     const tailored = tailorResume(job, profile, scoreResult);
 
     const gen = generateResume(profile, job, tailored);
+
+    // 缺失关键词 → 学习计划（让用户知道该补什么、怎么补、多久）
+    const learningPlan = buildLearningPlan(gen.gaps);
+    const planSummary = summarizePlan(learningPlan);
     const saved = addVersion({
       jobId: job.id,
       jobTitle: job.position,
@@ -834,6 +888,8 @@ const routes = {
       density: gen.density,
       checks: gen.checks,
       gaps: gen.gaps,
+      learningPlan,
+      planSummary,
       skillGroups: gen.skillGroups,
     };
   },
