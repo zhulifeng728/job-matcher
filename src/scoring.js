@@ -149,17 +149,21 @@ export function scoreJob(job, profile) {
   // ── 1. 六维度打分 ──
   const dims = profile.dimensions.map((dim) => {
     const s = scoreDimension(dim, text);
+    // 校准过的权重优先（profile.weights 由「洞察」页应用后写入）
+    const w = Number.isFinite(profile.weights?.[dim.id])
+      ? Number(profile.weights[dim.id])
+      : dim.weight;
     return {
       id: dim.id,
       name: dim.name,
-      weight: dim.weight,
+      weight: w,
       level: dim.level,
       ratio: s.ratio,
       raw: s.raw,
       max: s.max,
       hits: s.hits,
       // 该维度贡献的分数（权重 × 覆盖率）
-      score: dim.weight * s.ratio,
+      score: w * s.ratio,
     };
   });
 

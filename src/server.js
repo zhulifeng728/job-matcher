@@ -32,6 +32,7 @@ import { tailorResume, buildStudyPlan } from './tailor.js';
 import { generatePrepDoc, hasAI } from './deep-prep.js';
 import { renderMarkdown } from './markdown.js';
 import { buildStrategy } from './level.js';
+import { calibrate, analyzeOutcomes, currentWeightOf } from './calibrate.js';
 import { extractKeywords, generateResume, renderPrintableHTML } from './generate.js';
 import {
   addVersion, loadVersions, getVersion, selectVersion, deleteVersion, publicVersion,
@@ -695,6 +696,88 @@ const routes = {
       corrections: saved.corrections || [],
       url: sourceUrl,
     };
+  },
+
+  // ─────────── 洞察与权重校准 ───────────
+
+  /** 投递漏斗 + 权重校准分析 */
+  'GET /api/insights': async () => {
+    const profile = loadProfile();
+    if (!profile) return { error: '还没有导入简历', status: 400 };
+
+    const jobs = loadJobs();
+    const outcomes = analyzeOutcomes(jobs);
+    const calib = calibrate(profile, jobs);
+
+    return {
+      outcomes: {
+        total: outcomes.total,
+        applied: outcomes.applied,
+        positive: outcomes.positive,
+        negative: outcomes.negative,
+        pending: outcomes.pending,
+        interviewRate: outcomes.interviewRate,
+        offerCount: outcomes.offerCount,
+        repliedCount: outcomes.repliedCount,
+      },
+      calibration: calib,
+    };
+  },
+
+  /** 应用建议权重，并重算所有岗位分数 */
+  'POST /api/insights/weights': async (q, p, body) => {
+    const profile = loadProfile();
+    if (!profile) return { error: '还没有导入简历', status: 400 };
+
+    const incoming = body.weights && typeof body.weights === 'object' ? body.weights : null;
+    if (!incoming) return { error: '缺少权重数据', status: 400 };
+
+    // 只接受 profile 里存在的维度，且数值必须是合理的正数
+    const clean = {};
+    let sum = 0;
+    for (const dim of profile.dimensions || []) {
+      const v = Number(incoming[dim.id]);
+      if (!Number.isFinite(v) || v < 1 || v > 60) continue;
+      clean[dim.id] = Math.round(v);
+      sum += Math.round(v);
+    }
+    if (!Object.keys(clean).length) return { error: '权重数据无效', status: 400 };
+    if (Math.abs(sum - 100) > 2) {
+      return { error: `权重合计应为 100，当前 ${sum}`, status: 400 };
+    }
+
+    profile.weights = clean;
+    saveProfile(profile);
+
+    // 立刻重算，让列表和详情反映新权重
+    const jobs = loadJobs();
+    const rescored = jobs.map((j) => {
+      const parsed = { position: j.position, company: j.company, salary: j.salary, city: j.city, text: j.text };
+      const sc = scoreJob(parsed, profile);
+      return { ...j, total: sc.total, grade: sc.grade, dimensions: sc.breakdown.dimensions, corrections: sc.corrections };
+    });
+    saveJobs(rescored);
+
+    return { ok: true, weights: clean, rescored: rescored.length };
+  },
+
+  /** 恢复默认权重 */
+  'DELETE /api/insights/weights': async () => {
+    const profile = loadProfile();
+    if (!profile) return { error: '还没有导入简历', status: 400 };
+
+    delete profile.weights;
+    saveProfile(profile);
+
+    const jobs = loadJobs();
+    const rescored = jobs.map((j) => {
+      const parsed = { position: j.position, company: j.company, salary: j.salary, city: j.city, text: j.text };
+      const sc = scoreJob(parsed, profile);
+      return { ...j, total: sc.total, grade: sc.grade, dimensions: sc.breakdown.dimensions, corrections: sc.corrections };
+    });
+    saveJobs(rescored);
+
+    return { ok: true, rescored: rescored.length };
   },
 
   // ─────────── 定制简历 ───────────

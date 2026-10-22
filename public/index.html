@@ -241,6 +241,30 @@ textarea { min-height:200px; line-height:1.7; resize:vertical; }
 .md-doc strong { font-weight:600; color:var(--ink); }
 .md-doc code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); padding:1px 5px; border-radius:4px; color:var(--brand-deep); }
 .md-doc hr { border:none; border-top:1px solid var(--line); margin:28px 0; }
+.funnel { display:flex; gap:10px; flex-wrap:wrap; }
+.funnel-cell {
+  flex:1; min-width:120px; background:var(--bg-soft); border-radius:var(--r-card);
+  padding:16px 18px; text-align:center;
+}
+.funnel-cell .n { font-size:26px; font-weight:700; color:var(--brand); line-height:1.1; }
+.funnel-cell .l { font-size:12.5px; color:var(--ink-3); margin-top:4px; }
+.funnel-cell .r { font-size:11.5px; color:var(--ink-4); margin-top:2px; }
+.dim-row { padding:13px 0; border-bottom:1px solid var(--line); }
+.dim-row:last-child { border-bottom:none; }
+.dim-head { display:flex; align-items:baseline; gap:10px; margin-bottom:8px; }
+.dim-head .nm { font-size:14px; font-weight:500; flex:1; }
+.dim-head .wt { font-size:13px; font-variant-numeric:tabular-nums; }
+.dim-head .wt b { font-size:15px; }
+.dim-head .dlt { font-size:12px; font-weight:600; padding:1px 7px; border-radius:5px; }
+.dim-head .dlt.up { background:#dcfce7; color:#15803d; }
+.dim-head .dlt.down { background:#fef3c7; color:#b45309; }
+.dim-head .dlt.flat { background:var(--bg-soft-2); color:var(--ink-3); }
+.cmp { display:grid; grid-template-columns:56px 1fr; gap:8px; align-items:center; font-size:12px; }
+.cmp .lab { color:var(--ink-4); text-align:right; }
+.cmp .track { height:7px; background:var(--bg-soft-2); border-radius:4px; overflow:hidden; }
+.cmp .track i { display:block; height:100%; border-radius:4px; }
+.cmp .track i.pos { background:linear-gradient(90deg,#5B8DEF,#3669EC); }
+.cmp .track i.neg { background:#cbd5e1; }
 .resume-preview {
   background:#fff; border:1px solid var(--line); border-radius:var(--r-card);
   padding:32px 36px; font-size:14px; line-height:1.8; color:var(--ink);
@@ -457,6 +481,7 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         <button role="tab" data-view="prep" aria-selected="false">技术复习</button>
         <button role="tab" data-view="jobs" aria-selected="false">职位列表</button>
         <button role="tab" data-view="extension" aria-selected="false">浏览器扩展</button>
+        <button role="tab" data-view="insights" aria-selected="false">洞察</button>
         <button role="tab" data-view="settings" aria-selected="false">设置</button>
       </nav>
       <div class="spacer"></div>
@@ -857,6 +882,19 @@ code { font-family:var(--mono); font-size:.9em; background:var(--bg-soft-2); pad
         </div>
         <pre id="exportOut" class="report" hidden></pre>
       </div>
+    </div>
+  </section>
+
+  <!-- 洞察 -->
+  <section class="view" id="view-insights" hidden>
+    <div class="page">
+      <div class="page-header">
+        <h2>洞察</h2>
+        <p>用你真实的投递结果，反过来校准评分权重 —— 哪些能力真正带来面试，让数据说话。</p>
+      </div>
+
+      <div id="funnelBox"></div>
+      <div id="calibBox" style="margin-top:20px"></div>
     </div>
   </section>
 
@@ -1635,6 +1673,130 @@ function renderPrepCards(d) {
       + '<p class="card-desc">P0 是 JD 明确提到的、必须能讲清楚的；P1 是相关维度的高频考点。</p>' + topics + '</div>' : '')
     + (talks ? '<div class="card"><h3 class="card-title">项目该怎么讲</h3>'
       + '<p class="card-desc">挑出与这个岗位匹配的经历，按 STAR 结构准备。</p>' + talks + '</div>' : '');
+}
+
+/* ═══════════════════════════════════════════
+   洞察：投递漏斗 + 权重校准
+   ═══════════════════════════════════════════ */
+
+async function loadInsights() {
+  const funnelBox = $('funnelBox');
+  const calibBox = $('calibBox');
+  if (!funnelBox) return;
+  funnelBox.innerHTML = skList(1);
+  calibBox.innerHTML = '';
+
+  try {
+    const d = await api('/api/insights');
+    const o = d.outcomes;
+    const c = d.calibration;
+
+    // ── 漏斗 ──
+    funnelBox.innerHTML = '<div class="card">'
+      + '<h3 class="card-title" style="margin-bottom:16px">投递漏斗</h3>'
+      + '<div class="funnel">'
+      + cell(o.applied, '已投递', '')
+      + cell(o.repliedCount, '收到回复', o.applied ? Math.round(o.repliedCount / o.applied * 100) + '% 回复率' : '')
+      + cell(o.positive, '进入面试', o.interviewRate + '% 面试率')
+      + cell(o.offerCount, '拿到 offer', '')
+      + '</div>'
+      + (o.applied < 6
+        ? '<div class="alert alert-info" style="margin-top:16px;margin-bottom:0">'
+          + '多投一些岗位并更新状态，校准会越来越准。现在已投 ' + o.applied + ' 个。</div>'
+        : '')
+      + '</div>';
+
+    // ── 校准 ──
+    if (!c.sufficient) {
+      calibBox.innerHTML = '<div class="card">'
+        + '<h3 class="card-title">权重校准</h3>'
+        + '<div class="alert alert-warn" style="margin-top:14px">'
+        + '<b>样本还不够，先不算。</b><br>'
+        + (c.reasons || []).map((r) => '· ' + esc(r)).join('<br>')
+        + '<br><span style="font-size:12.5px">' + esc(c.note || '') + '</span></div>'
+        + '<div style="font-size:13px;color:var(--ink-3);margin-top:14px">'
+        + '还需要：再投 <b>' + c.need.moreApplied + '</b> 个岗位、'
+        + '再攒 <b>' + c.need.morePositive + '</b> 个面试</div>'
+        + '</div>';
+      return;
+    }
+
+    const rows = (c.dimensions || []).map((x) => {
+      const cls = x.delta >= 3 ? 'up' : x.delta <= -3 ? 'down' : 'flat';
+      const sign = x.delta > 0 ? '+' + x.delta : String(x.delta);
+      return '<div class="dim-row">'
+        + '<div class="dim-head">'
+        + '<span class="nm">' + esc(x.name) + '</span>'
+        + '<span class="wt">' + x.currentWeight + ' → <b>' + x.suggestedWeight + '</b></span>'
+        + '<span class="dlt ' + cls + '">' + sign + '</span>'
+        + '</div>'
+        + '<div class="cmp"><span class="lab">进面</span>'
+        + '<span class="track"><i class="pos" style="width:' + Math.round(x.avgPositive * 100) + '%"></i></span></div>'
+        + '<div class="cmp"><span class="lab">没消息</span>'
+        + '<span class="track"><i class="neg" style="width:' + Math.round(x.avgNegative * 100) + '%"></i></span></div>'
+        + '</div>';
+    }).join('');
+
+    const findings = (c.findings || []).map((f) =>
+      '<div class="li" style="display:flex;gap:8px;font-size:13px;line-height:1.7;margin-bottom:8px;color:var(--ink-2)">'
+      + '<span style="flex:none;width:4px;height:4px;border-radius:50%;background:var(--brand);margin-top:9px"></span>'
+      + '<span>' + esc(f) + '</span></div>').join('');
+
+    calibBox.innerHTML = '<div class="card">'
+      + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">'
+      + '<h3 class="card-title" style="margin:0;flex:1">权重校准</h3>'
+      + '<span class="tag">样本 ' + c.sample.applied + ' 个</span>'
+      + '<span class="tag">置信度 ' + esc(c.confidence) + '</span>'
+      + (c.applied ? '<span class="tag tag-brand">已应用校准</span>' : '')
+      + '</div>'
+      + '<p class="card-desc" style="margin-bottom:16px">'
+      + '把「进面的岗位」和「投了没消息的岗位」分成两组，比较每个维度的平均得分。'
+      + '差得越多，说明这个维度越能区分结果。</p>'
+      + findings
+      + '<div style="margin-top:18px">' + rows + '</div>'
+      + '<div class="alert alert-info" style="margin-top:18px">' + esc(c.caveat) + '</div>'
+      + '<div class="toolbar" style="margin-top:16px">'
+      + '<button class="btn btn-primary" id="btnApplyWeights">应用建议权重</button>'
+      + (c.applied ? '<button class="btn btn-ghost" id="btnResetWeights">恢复默认权重</button>' : '')
+      + '<span id="calibStatus" style="font-size:13px;color:var(--ink-3)"></span>'
+      + '</div></div>';
+
+    $('btnApplyWeights')?.addEventListener('click', async () => {
+      const weights = {};
+      for (const x of c.dimensions) weights[x.id] = x.suggestedWeight;
+      const btn = $('btnApplyWeights');
+      btn.disabled = true;
+      btn.textContent = '应用中…';
+      try {
+        const r = await api('/api/insights/weights', { method: 'POST', body: { weights } });
+        $('calibStatus').textContent = '已应用，重算了 ' + r.rescored + ' 个岗位';
+        await loadJobs();
+        setTimeout(() => loadInsights(), 600);
+      } catch (e) {
+        $('calibStatus').textContent = '应用失败：' + e.message;
+        btn.disabled = false;
+        btn.textContent = '应用建议权重';
+      }
+    });
+
+    $('btnResetWeights')?.addEventListener('click', async () => {
+      try {
+        await api('/api/insights/weights', { method: 'DELETE' });
+        await loadJobs();
+        loadInsights();
+      } catch (e) {
+        alert('恢复失败：' + e.message);
+      }
+    });
+  } catch (e) {
+    funnelBox.innerHTML = alertHTML('洞察加载失败：' + esc(e.message), 'error');
+  }
+}
+
+function cell(n, label, rate) {
+  return '<div class="funnel-cell"><div class="n">' + esc(n) + '</div>'
+    + '<div class="l">' + esc(label) + '</div>'
+    + (rate ? '<div class="r">' + esc(rate) + '</div>' : '') + '</div>';
 }
 
 /* ═══════════════════════════════════════════
@@ -2441,7 +2603,7 @@ function switchView(name) {
   document.querySelectorAll('.nav-links button').forEach((b) => {
     b.setAttribute('aria-selected', String(b.dataset.view === name));
   });
-  ['home', 'resume', 'custom', 'optimize', 'prep', 'jobs', 'detail', 'import', 'extension', 'export', 'settings'].forEach((v) => {
+  ['home', 'resume', 'custom', 'optimize', 'prep', 'jobs', 'detail', 'import', 'extension', 'insights', 'export', 'settings'].forEach((v) => {
     const el = $('view-' + v);
     if (el) el.hidden = v !== name;
   });
@@ -2449,6 +2611,7 @@ function switchView(name) {
   if (name === 'resume') loadResume();
   if (name === 'extension') loadTokens();
   if (name === 'custom') loadVersions();
+  if (name === 'insights') loadInsights();
   if (name === 'optimize') { if (!S.optJob) { setStepper('optStepper', 1); if ($('optPickCard')) $('optPickCard').hidden = false; if ($('optResult')) $('optResult').innerHTML = ''; } }
   if (name === 'prep') { if (!S.prepJob) { setStepper('prepStepper', 1); if ($('prepPickCard')) $('prepPickCard').hidden = false; if ($('prepResult')) $('prepResult').innerHTML = ''; } }
   window.scrollTo(0, 0);

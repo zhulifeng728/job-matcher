@@ -178,7 +178,36 @@ JOB_MATCHER_DATA_DIR=data-demo node src/server.js
 
 自动统计回复率、面试率、offer 率，用于判断自己的投递策略是否有效。
 
-### 3. 深度复习文档
+### 3. 洞察：用投递结果校准评分权重
+
+评分权重默认是「架构 25 / AI 25 / 小程序 15 / 后端 15 / 系统设计 10 / 管理 10」—— 拍脑袋定的。
+
+「洞察」页把它变成数据驱动：
+
+```
+把「进面的岗位」和「投了没消息的岗位」分成两组
+  → 比较每个维度的平均得分
+  → 差得越多，说明这个维度越能区分结果
+  → 据此调整权重
+```
+
+**为什么这件事重要**：Career-Ops（41.7K★）、Resume-Matcher（27.9K★）、ai-job-search（19K★）
+的评分权重都是静态的，没人用「投出去之后发生了什么」来校准。
+
+**但样本少的时候「规律」是假的，所以做了四道防线**：
+
+| 防线 | 做法 |
+|---|---|
+| 样本门槛 | 已投 < 6 或进面 < 2 直接拒绝给建议，只说还差多少 |
+| 调整上限 | 单维最多 ±60%，避免一两个极端样本带偏全局 |
+| 置信度标注 | 已投 ≥20 且进面 ≥5 才算「中」，否则标「低」 |
+| 不自动应用 | 必须手动点「应用建议权重」，可一键恢复默认 |
+
+界面上还会明确写：**「这是启发式推断，不是因果结论」**。
+
+应用后会立刻重算所有岗位分数，让列表反映新权重。
+
+### 4. 深度复习文档
 
 不只是知识点清单 —— 按 **9 段固定结构**生成一份可直接用来准备的文档：
 
@@ -216,7 +245,7 @@ JOB_MATCHER_DATA_DIR=data-demo node src/server.js
 AI 路径的续写机制：单轮上限 4096 token，靠 `[REVIEW_DOC_DONE]` 完成标记判断是否被截断，
 未完成就带着「已生成内容结尾」续写，最多 3 轮。
 
-### 4. AI 增强（可选）
+### 5. AI 增强（可选）
 
 配置模型后可以：
 
@@ -365,6 +394,11 @@ job-matcher/
 │   ├── auth.js        账号、密码哈希、签名会话、用户上下文
 │   ├── deep-prep.js   深度复习文档生成（AI + 知识库双路径）
 │   ├── markdown.js    极简 Markdown 渲染（服务端，零依赖）
+│   ├── generate.js    定制简历生成（关键词分级 + ATS 检查）
+│   ├── versions.js    简历版本管理
+│   ├── calibrate.js   用投递结果反推评分权重
+│   ├── level.js       职级策略与谈薪
+│   ├── stories.js     面试故事库（STAR）
 │   ├── prompts/
 │   │   └── review-doc.js  复习文档 Prompt（9 段结构 + 续写）
 │   └── store.js       数据层（JSON 原子写 + 状态机 + 统计）
@@ -429,6 +463,12 @@ job-matcher/
 | GET | `/api/jobs/:id` | 详情 |
 | GET | `/api/jobs/:id/resume` | **简历定制建议**（重排要点 + 摘要 + 短板） |
 | GET | `/api/jobs/:id/prep` | **复习计划**（知识点 + 面试问题 + 时间安排） |
+| GET | `/api/insights` | **洞察**（投递漏斗 + 权重校准分析） |
+| POST | `/api/insights/weights` | 应用校准权重并重算全部分数 |
+| DELETE | `/api/insights/weights` | 恢复默认权重 |
+| POST | `/api/jobs/:id/generate-resume` | **生成定制简历**（含覆盖率与 ATS 检查） |
+| GET | `/api/resume/versions` | 简历版本列表 |
+| GET | `/api/resume/versions/:id/print` | 打印视图（浏览器存 PDF） |
 | GET | `/api/jobs/:id/prep-doc` | **深度复习文档**（9 段结构，AI 或知识库生成） |
 | PATCH | `/api/jobs/:id` | 更新状态或备注 |
 | DELETE | `/api/jobs/:id` | 删除 |
